@@ -20,6 +20,14 @@ Os perfis de servidor são salvos na pasta `saves/` ou, quando empacotado, no di
 - Scraper de informações de mods da Workshop do Reforger
 - Interface de criação/importação de servidor
 
+### Captura de Dados de Mods
+
+O software utiliza web scraping para capturar informações de mods do marketplace da Bohemia Interactive (site oficial do Arma Reforger). Isso é feito porque a empresa não fornece uma API oficial para busca e consulta de mods, forçando desenvolvedores a recorrer a métodos menos eficientes e mais propensos a falhas.
+
+Os dados capturados incluem nomes, descrições, IDs e outras metadatas dos mods disponíveis na Workshop. Esses dados são utilizados para permitir que os usuários pesquisem, visualizem e adicionem mods aos seus perfis de servidor diretamente na interface do aplicativo, facilitando a configuração de servidores personalizados.
+
+Infelizmente, a ausência de uma API dedicada torna o processo mais frágil, já que mudanças no layout do site podem quebrar a funcionalidade. Esperamos que a Bohemia Interactive considere implementar uma API oficial em futuras atualizações.
+
 ### Requisitos
 
 - Node.js instalado
@@ -99,6 +107,14 @@ Server profiles are saved in the `saves/` folder, or in the user's data director
 - BattleMetrics data fetch
 - Reforger Workshop mod scraping
 - Create/import server configuration
+
+### Mod Data Capture
+
+The software uses web scraping to capture mod information from Bohemia Interactive's marketplace (the official Arma Reforger website). This is necessary because the company does not provide an official API for searching and querying mods, forcing developers to use less efficient and more error-prone methods.
+
+The captured data includes mod names, descriptions, IDs, and other metadata from available Workshop mods. This data is used to allow users to search, view, and add mods to their server profiles directly in the app's interface, making it easier to configure custom servers.
+
+Unfortunately, the lack of a dedicated API makes the process more fragile, as changes to the website's layout can break functionality. We hope Bohemia Interactive will consider implementing an official API in future updates.
 
 ### Requirements
 

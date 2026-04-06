@@ -12,13 +12,32 @@ Este projeto inicia um backend local em `server.js` e carrega a interface dentro
 A interface principal é servida em `http://localhost:3000` e o servidor de configuração inicial usa `setup.html` quando disponível.
 Os perfis de servidor são salvos na pasta `saves/` ou, quando empacotado, no diretório de dados do usuário do Windows.
 
+<img width="1439" height="849" alt="image" src="https://github.com/user-attachments/assets/c4cb9f8f-2f98-427d-ade4-ebdce7f7fd07" />
+
+
 ### Funcionalidades
 
 - Gerenciamento de perfis de servidor (`saves/*.json`)
+
+<img width="658" height="327" alt="image" src="https://github.com/user-attachments/assets/d564b59d-0444-4cfb-b3f4-be7a782195cc" />
+
 - Conexão via RCON usando `rcon-client`
+
+<img width="1177" height="768" alt="image" src="https://github.com/user-attachments/assets/09f5682c-302e-4486-b57e-bb050307abcb" />
+
 - Consulta de dados do BattleMetrics
+
+<img width="1348" height="817" alt="image" src="https://github.com/user-attachments/assets/acfb714d-88c3-4a89-a87d-6d0f3944455c" />
+
 - Scraper de informações de mods da Workshop do Reforger
+
+<img width="980" height="814" alt="image" src="https://github.com/user-attachments/assets/e963bb34-6fff-4439-8df2-e9435334e2a5" />
+
 - Interface de criação/importação de servidor
+
+<img width="350" height="153" alt="image" src="https://github.com/user-attachments/assets/3589a494-4dde-4cb4-98a5-a4b9db0b8f29" />
+<img width="600" height="357" alt="image" src="https://github.com/user-attachments/assets/782c8125-359d-460f-b57e-980ae7eb2170" />
+
 
 ### Captura de Dados de Mods
 
@@ -103,10 +122,27 @@ Server profiles are saved in the `saves/` folder, or in the user's data director
 ### Features
 
 - Server profile management (`saves/*.json`)
+
+<img width="656" height="333" alt="image" src="https://github.com/user-attachments/assets/cf57c729-68d8-4d30-9849-d220fa27e33e" />
+
 - RCON connection using `rcon-client`
+
+<img width="1177" height="768" alt="image" src="https://github.com/user-attachments/assets/09f5682c-302e-4486-b57e-bb050307abcb" />
+
 - BattleMetrics data fetch
+
+<img width="1348" height="817" alt="image" src="https://github.com/user-attachments/assets/acfb714d-88c3-4a89-a87d-6d0f3944455c" />
+
 - Reforger Workshop mod scraping
+
+<img width="980" height="814" alt="image" src="https://github.com/user-attachments/assets/e963bb34-6fff-4439-8df2-e9435334e2a5" />
+
 - Create/import server configuration
+
+<img width="349" height="151" alt="image" src="https://github.com/user-attachments/assets/0e387004-9d03-4aa5-8c78-2082effc1682" />
+<img width="593" height="364" alt="image" src="https://github.com/user-attachments/assets/c0f28042-72e7-40a7-aecf-0f4c102545bf" />
+
+
 
 ### Mod Data Capture
 

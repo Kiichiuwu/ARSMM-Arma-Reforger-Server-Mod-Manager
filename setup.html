@@ -18,6 +18,10 @@
         .save-item { background: #2a2a2a; padding: 15px; margin-bottom: 10px; cursor: pointer; border: 1px solid #333; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
         .save-item:hover { border-color: #d4e157; }
         .label { font-size: 0.85em; color: #888; margin-bottom: 2px; display: block; }
+        .container { position: relative; }
+        .lang-switcher { position: absolute; right: 20px; bottom: 20px; display: flex; gap: 8px; }
+        .lang-switcher button { padding: 8px 12px; border: 1px solid #333; border-radius: 4px; background: #111; color: #eee; cursor: pointer; transition: 0.2s; }
+        .lang-switcher button.active, .lang-switcher button:hover { border-color: #d4e157; color: #d4e157; }
     </style>
 </head>
 <body>
@@ -25,60 +29,154 @@
 <div class="container">
     
     <div id="step-list" class="step active">
-        <h1>Selecione o Servidor</h1>
+        <h1 data-i18n="selectServer">Selecione o Servidor</h1>
         <div id="profileList" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
-            <div style="text-align:center; color:#555;">Buscando perfis...</div>
+            <div data-i18n="searchingProfiles" style="text-align:center; color:#555;">Buscando perfis...</div>
         </div>
-        <button class="btn btn-primary" onclick="goToStep('method')">+ CRIAR NOVO SERVIDOR</button>
+        <button class="btn btn-primary" onclick="goToStep('method')" data-i18n="createNewServer">+ CRIAR NOVO SERVIDOR</button>
     </div>
 
     <div id="step-method" class="step">
-        <h1>Configuração Inicial</h1>
-        <p style="text-align:center; color:#aaa;">Você já possui um arquivo JSON de configuração?</p>
-        <button class="btn btn-primary" onclick="goToStep('import')">SIM, TENHO O CONFIG.JSON</button>
-        <button class="btn btn-sec" onclick="goToStep('wizard')">NÃO, CRIAR DO ZERO</button>
-        <button class="btn btn-sec" style="margin-top:20px; border:1px solid #333; background:transparent;" onclick="goToStep('list')">Voltar</button>
+        <h1 data-i18n="setupTitle">Configuração Inicial</h1>
+        <p data-i18n="haveConfig" style="text-align:center; color:#aaa;">Você já possui um arquivo JSON de configuração?</p>
+        <button class="btn btn-primary" onclick="goToStep('import')" data-i18n="importConfigButton">SIM, TENHO O CONFIG.JSON</button>
+        <button class="btn btn-sec" onclick="goToStep('wizard')" data-i18n="newWizardButton">NÃO, CRIAR DO ZERO</button>
+        <button class="btn btn-sec" style="margin-top:20px; border:1px solid #333; background:transparent;" onclick="goToStep('list')" data-i18n="backButton">Voltar</button>
     </div>
 
     <div id="step-import" class="step">
-        <h1>Importar Config</h1>
-        <span class="label">Cole o conteúdo do seu arquivo config.json abaixo:</span>
-        <textarea id="importJson" rows="10" placeholder="{ ... }"></textarea>
-        <button class="btn btn-primary" onclick="processImport()">PRÓXIMO</button>
-        <button class="btn btn-sec" onclick="goToStep('method')">Voltar</button>
+        <h1 data-i18n="importTitle">Importar Config</h1>
+        <span class="label" data-i18n="importLabel">Cole o conteúdo do seu arquivo config.json abaixo:</span>
+        <textarea id="importJson" rows="10" data-i18n-placeholder="importPlaceholder" placeholder="{ ... }"></textarea>
+        <button class="btn btn-primary" onclick="processImport()" data-i18n="importNext">PRÓXIMO</button>
+        <button class="btn btn-sec" onclick="goToStep('method')" data-i18n="backButton">Voltar</button>
     </div>
 
     <div id="step-wizard" class="step">
-        <h1>Criar Servidor</h1>
-        <span class="label">Nome do Servidor (Que aparece na lista)</span>
-        <input type="text" id="wizName" placeholder="Ex: [BR] Meu Server">
+        <h1 data-i18n="serverWizardTitle">Criar Servidor</h1>
+        <span class="label" data-i18n="serverNameLabel">Nome do Servidor (Que aparece na lista)</span>
+        <input type="text" id="wizName" data-i18n-placeholder="serverNamePlaceholder" placeholder="Ex: [BR] Meu Server">
         
-        <span class="label">Senha de Admin (RCON/Login)</span>
+        <span class="label" data-i18n="adminPassLabel">Senha de Admin (RCON/Login)</span>
         <input type="text" id="wizAdminPass" value="admin123">
 
-        <span class="label">Máximo de Players</span>
+        <span class="label" data-i18n="maxPlayersLabel">Máximo de Players</span>
         <input type="number" id="wizPlayers" value="64">
 
-        <button class="btn btn-primary" onclick="processWizard()">PRÓXIMO</button>
-        <button class="btn btn-sec" onclick="goToStep('method')">Voltar</button>
+        <button class="btn btn-primary" onclick="processWizard()" data-i18n="importNext">PRÓXIMO</button>
+        <button class="btn btn-sec" onclick="goToStep('method')" data-i18n="backButton">Voltar</button>
     </div>
 
     <div id="step-bm" class="step">
-        <h1>Battlemetrics</h1>
-        <p style="text-align:center; color:#aaa;">Seu servidor já está online no Battlemetrics?</p>
-        <span class="label">ID do Servidor (Opcional - deixe em branco se não tiver)</span>
-        <input type="text" id="wizBmId" placeholder="Ex: 12345678">
+        <h1 data-i18n="battlemetrics">Battlemetrics</h1>
+        <p data-i18n="bmQuestion" style="text-align:center; color:#aaa;">Seu servidor já está online no Battlemetrics?</p>
+        <span class="label" data-i18n="bmIdLabel">ID do Servidor (Opcional - deixe em branco se não tiver)</span>
+        <input type="text" id="wizBmId" data-i18n-placeholder="bmIdPlaceholder" placeholder="Ex: 12345678">
         
-        <button class="btn btn-primary" onclick="finishSetup()">FINALIZAR</button>
+        <button class="btn btn-primary" onclick="finishSetup()" data-i18n="finishButton">FINALIZAR</button>
     </div>
 
+    <div class="lang-switcher">
+        <button type="button" id="langPtBtn" onclick="setAppLanguage('pt-BR')">Português BR</button>
+        <button type="button" id="langEnBtn" onclick="setAppLanguage('en-US')">English</button>
+    </div>
 </div>
 
 <script>
     let finalConfig = {}; // Objeto que será salvo
 
+    const TRANSLATIONS = {
+        "pt-BR": {
+            selectServer: "Selecione o Servidor",
+            searchingProfiles: "Buscando perfis...",
+            createNewServer: "+ CRIAR NOVO SERVIDOR",
+            setupTitle: "Configuração Inicial",
+            haveConfig: "Você já possui um arquivo JSON de configuração?",
+            importConfigButton: "SIM, TENHO O CONFIG.JSON",
+            newWizardButton: "NÃO, CRIAR DO ZERO",
+            backButton: "Voltar",
+            importTitle: "Importar Config",
+            importLabel: "Cole o conteúdo do seu arquivo config.json abaixo:",
+            importNext: "PRÓXIMO",
+            serverWizardTitle: "Criar Servidor",
+            serverNameLabel: "Nome do Servidor (Que aparece na lista)",
+            adminPassLabel: "Senha de Admin (RCON/Login)",
+            maxPlayersLabel: "Máximo de Players",
+            battlemetrics: "Battlemetrics",
+            bmQuestion: "Seu servidor já está online no Battlemetrics?",
+            bmIdLabel: "ID do Servidor (Opcional - deixe em branco se não tiver)",
+            importPlaceholder: "{ ... }",
+            serverNamePlaceholder: "Ex: [BR] Meu Server",
+            bmIdPlaceholder: "Ex: 12345678",
+            finishButton: "FINALIZAR",
+            invalidJson: "JSON inválido! Verifique a formatação.",
+            deleteConfirm: "Excluir este perfil? Esta ação não pode ser desfeita.",
+            deleteButton: "Excluir",
+            profileDeleteFail: "Falha ao excluir: "
+        },
+        "en-US": {
+            selectServer: "Select Server",
+            searchingProfiles: "Loading profiles...",
+            createNewServer: "+ CREATE NEW SERVER",
+            setupTitle: "Initial Setup",
+            haveConfig: "Do you already have a JSON configuration file?",
+            importConfigButton: "YES, I HAVE config.json",
+            newWizardButton: "NO, CREATE FROM SCRATCH",
+            backButton: "Back",
+            importTitle: "Import Config",
+            importLabel: "Paste your config.json content below:",
+            importNext: "NEXT",
+            serverWizardTitle: "Create Server",
+            serverNameLabel: "Server Name (Shown in list)",
+            adminPassLabel: "Admin Password (RCON/Login)",
+            maxPlayersLabel: "Max Players",
+            battlemetrics: "Battlemetrics",
+            bmQuestion: "Is your server already online on Battlemetrics?",
+            bmIdLabel: "Server ID (Optional - leave blank if none)",
+            importPlaceholder: "{ ... }",
+            serverNamePlaceholder: "Ex: [BR] My Server",
+            bmIdPlaceholder: "Ex: 12345678",
+            finishButton: "FINISH",
+            invalidJson: "Invalid JSON! Check formatting.",
+            deleteConfirm: "Delete this profile? This action cannot be undone.",
+            deleteButton: "Delete",
+            profileDeleteFail: "Failed to delete: "
+        }
+    };
+
+    function getAppLanguage() {
+        return localStorage.getItem('appLang') || 'pt-BR';
+    }
+
+    function setAppLanguage(lang) {
+        localStorage.setItem('appLang', lang);
+        applyLocale();
+    }
+
+    function t(key) {
+        const lang = getAppLanguage();
+        return TRANSLATIONS[lang][key] || TRANSLATIONS['pt-BR'][key] || key;
+    }
+
+    function applyLocale() {
+        const lang = getAppLanguage();
+        document.documentElement.lang = lang;
+        document.getElementById('langPtBtn').classList.toggle('active', lang === 'pt-BR');
+        document.getElementById('langEnBtn').classList.toggle('active', lang === 'en-US');
+
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.dataset.i18n;
+            if (key) el.innerText = t(key);
+        });
+
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.dataset.i18nPlaceholder;
+            if (key) el.placeholder = t(key);
+        });
+    }
+
     // 1. Carrega lista ao abrir
-    window.onload = loadProfiles;
+    window.onload = () => { applyLocale(); loadProfiles(); };
 
     async function loadProfiles() {
         const res = await fetch('/api/profiles');
@@ -94,7 +192,7 @@
         profiles.forEach(p => {
             const div = document.createElement('div');
             div.className = 'save-item';
-            div.innerHTML = `<span style="flex:1">${p.name}</span> <small style="color:#666; margin-right:10px">${p.filename}</small> <button class="btn btn-sec" style="width:auto; padding:8px 12px;" onclick="event.stopPropagation(); deleteProfile('${p.filename}')">Excluir</button>`;
+            div.innerHTML = `<span style="flex:1">${p.name}</span> <small style="color:#666; margin-right:10px">${p.filename}</small> <button class="btn btn-sec" style="width:auto; padding:8px 12px;" onclick="event.stopPropagation(); deleteProfile('${p.filename}')">${t('deleteButton')}</button>`;
             div.onclick = () => loadServer(p.filename);
             list.appendChild(div);
         });
@@ -116,7 +214,7 @@
             };
             goToStep('bm');
         } catch(e) {
-            alert("JSON Inválido! Verifique a formatação.");
+            alert(t('invalidJson'));
         }
     }
 
@@ -182,13 +280,13 @@
     }
 
     async function deleteProfile(filename) {
-        if (!confirm('Excluir este perfil? Esta ação não pode ser desfeita.')) return;
+        if (!confirm(t('deleteConfirm'))) return;
         const res = await fetch('/api/profiles/' + encodeURIComponent(filename), { method: 'DELETE' });
         if (res.ok) {
             loadProfiles();
         } else {
             const body = await res.json().catch(() => ({}));
-            alert('Falha ao excluir: ' + (body.error || res.statusText));
+            alert(t('profileDeleteFail') + (body.error || res.statusText));
         }
     }
 

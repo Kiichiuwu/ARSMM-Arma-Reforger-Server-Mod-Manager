@@ -172,16 +172,16 @@
             <div class="nav-icon-box"><span class="nav-icon-menu">☰</span></div>
         </div>
         <div class="nav-item active" onclick="switchView('general', this)">
-            <div class="nav-icon-box">⚙️</div><span class="nav-label">Geral</span>
+            <div class="nav-icon-box">⚙️</div><span class="nav-label" data-i18n="nav.general">Geral</span>
         </div>
         <div class="nav-item" onclick="switchView('rcon', this)">
-            <div class="nav-icon-box">💻</div><span class="nav-label">RCON</span>
+            <div class="nav-icon-box">💻</div><span class="nav-label" data-i18n="nav.rcon">RCON</span>
         </div>
         <div class="nav-item" onclick="switchView('monitor', this)">
-            <div class="nav-icon-box">📈</div><span class="nav-label">Monitor</span>
+            <div class="nav-icon-box">📈</div><span class="nav-label" data-i18n="nav.monitor">Monitor</span>
         </div>
         <div class="nav-item" onclick="switchView('others', this)">
-            <div class="nav-icon-box">🔧</div><span class="nav-label">Outros</span>
+            <div class="nav-icon-box">🔧</div><span class="nav-label" data-i18n="nav.others">Outros</span>
         </div>
     </nav>
 
@@ -189,43 +189,43 @@
         <div id="view-general" class="view-section active">
             <div class="layout-split">
                 <div class="config-sidebar">
-                    <div><span class="sidebar-label">SERVER NAME</span><div class="input-group"><input type="text" id="confNamePrefix" value="[BRASIL/LATAM] BRS Core | " style="width:160px; font-size:0.8em;" oninput="updateJson()"><input type="text" id="confNameSuffix" placeholder="Texto livre..." oninput="updateJson()"></div></div>
+                    <div><span class="sidebar-label" data-i18n="sidebar.serverName">SERVER NAME</span><div class="input-group"><input type="text" id="confNamePrefix" value="[BRASIL/LATAM] BRS Core | " style="width:160px; font-size:0.8em;" oninput="updateJson()"><input type="text" id="confNameSuffix" data-i18n-placeholder="placeholderNameSuffix" placeholder="Texto livre..." oninput="updateJson()"></div></div>
                     <div>
-                        <span class="sidebar-label">NETWORK (SERVER BIND)</span>
+                        <span class="sidebar-label" data-i18n="sidebar.network">NETWORK (SERVER BIND)</span>
                         <div style="display:flex; gap:10px;">
-                            <div style="flex:1;"><span style="font-size:0.7em; color:#777;">BIND ADDRESS</span><input type="text" id="confBindIp" value="0.0.0.0" oninput="updateJson()"></div>
-                            <div style="flex:1;"><span style="font-size:0.7em; color:#777;">PUBLIC ADDRESS</span><input type="text" id="confPublicIp" placeholder="Ex: 189.x.x.x" oninput="updateJson()"></div>
+                            <div style="flex:1;"><span style="font-size:0.7em; color:#777;" data-i18n="bindAddress">BIND ADDRESS</span><input type="text" id="confBindIp" value="0.0.0.0" oninput="updateJson()"></div>
+                            <div style="flex:1;"><span style="font-size:0.7em; color:#777;" data-i18n="publicAddress">PUBLIC ADDRESS</span><input type="text" id="confPublicIp" data-i18n-placeholder="placeholderPublicIp" placeholder="Ex: 189.x.x.x" oninput="updateJson()"></div>
                         </div>
                     </div>
-                    <div><span class="sidebar-label">SERVER ADMINS</span><div class="input-group" style="margin-bottom: 5px;"><input type="text" id="newAdmin" placeholder="UUID..."><button class="btn-add" onclick="addAdmin()">+</button></div><div class="admin-box" id="adminList"></div><span class="sidebar-label" style="text-transform:none; color:#777; font-size:0.7em;">Admin Password:</span><input type="text" id="confAdminPass" value="kiichi" style="font-size:0.8em; padding:6px; background:#111;" oninput="updateJson()"></div>
-                    <div><div class="switch-row"><span style="font-weight:bold; font-size:0.9em;">Senha</span><label class="switch"><input type="checkbox" id="chkPass" onchange="togglePass()"><span class="slider"></span></label></div><input type="text" id="confPass" placeholder="Senha..." style="display:none;" oninput="updateJson()"></div>
-                    <div><span class="sidebar-label">MAX PLAYERS</span><select id="confPlayers" onchange="updateJson()"><option value="32">32</option><option value="64">64</option><option value="128" selected>128</option></select></div>
-                    <div><span class="sidebar-label">SCENARIO ID</span><select id="confScenario" onchange="toggleScenarioManual()"><option value="{9002E94F303DD941}Missions/23_Campaign_North.conf">Conflict - Everon</option><option value="{C78D276F55060411}Missions/17_Campaign_Arland.conf">Conflict - Arland</option><option value="custom">Cenário Customizado...</option></select><input type="text" id="scenarioCustom" placeholder="{GUID}Missions/Nome.conf" style="display:none; margin-top: 8px; border-color: var(--accent); font-size: 0.85em;" oninput="updateJson()"></div>
+                    <div><span class="sidebar-label" data-i18n="sidebar.serverAdmins">SERVER ADMINS</span><div class="input-group" style="margin-bottom: 5px;"><input type="text" id="newAdmin" data-i18n-placeholder="placeholderUuid" placeholder="UUID..."><button class="btn-add" onclick="addAdmin()">+</button></div><div class="admin-box" id="adminList"></div><span class="sidebar-label" style="text-transform:none; color:#777; font-size:0.7em;" data-i18n="adminPassword">Admin Password:</span><input type="text" id="confAdminPass" value="kiichi" style="font-size:0.8em; padding:6px; background:#111;" oninput="updateJson()"></div>
+                    <div><div class="switch-row"><span style="font-weight:bold; font-size:0.9em;" data-i18n="label.password">Senha</span><label class="switch"><input type="checkbox" id="chkPass" onchange="togglePass()"><span class="slider"></span></label></div><input type="text" id="confPass" data-i18n-placeholder="placeholderPassword" placeholder="Senha..." style="display:none;" oninput="updateJson()"></div>
+                    <div><span class="sidebar-label" data-i18n="sidebar.maxPlayers">MAX PLAYERS</span><select id="confPlayers" onchange="updateJson()"><option value="32">32</option><option value="64">64</option><option value="128" selected>128</option></select></div>
+                    <div><span class="sidebar-label" data-i18n="sidebar.scenarioId">SCENARIO ID</span><select id="confScenario" onchange="toggleScenarioManual()"><option value="{9002E94F303DD941}Missions/23_Campaign_North.conf" data-i18n="scenario.default1">Conflict - Everon</option><option value="{C78D276F55060411}Missions/17_Campaign_Arland.conf" data-i18n="scenario.default2">Conflict - Arland</option><option value="custom" data-i18n="scenario.custom">Cenário Customizado...</option></select><input type="text" id="scenarioCustom" data-i18n-placeholder="placeholderScenarioCustom" placeholder="{GUID}Missions/Nome.conf" style="display:none; margin-top: 8px; border-color: var(--accent); font-size: 0.85em;" oninput="updateJson()"></div>
                     <hr style="width:100%; border-color:#333; margin: 10px 0;">
-                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;">VISIBLE</span><label class="switch"><input type="checkbox" id="chkVis" checked onchange="updateJson()"><span class="slider"></span></label></div>
-                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;">NO 3RD PERSON</span><label class="switch"><input type="checkbox" id="chk3rd" checked onchange="updateJson()"><span class="slider"></span></label></div>
-                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;">BATTLEYE</span><label class="switch"><input type="checkbox" id="chkBE" onchange="updateJson()"><span class="slider"></span></label></div>
-                    <div class="sidebar-footer"><button class="btn-large btn-primary" onclick="downloadTxt()">BAIXAR .TXT</button><button class="btn-large btn-sec" onclick="copyJson()">COPIAR JSON</button><button class="btn-large btn-sec" style="font-size:0.8em; padding:8px;" onclick="document.getElementById('modalImport').style.display='flex'">IMPORTAR JSON</button></div>
+                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;" data-i18n="label.visible">VISIBLE</span><label class="switch"><input type="checkbox" id="chkVis" checked onchange="updateJson()"><span class="slider"></span></label></div>
+                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;" data-i18n="label.no3rd">NO 3RD PERSON</span><label class="switch"><input type="checkbox" id="chk3rd" checked onchange="updateJson()"><span class="slider"></span></label></div>
+                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;" data-i18n="label.battleye">BATTLEYE</span><label class="switch"><input type="checkbox" id="chkBE" onchange="updateJson()"><span class="slider"></span></label></div>
+                    <div class="sidebar-footer"><button class="btn-large btn-primary" onclick="downloadTxt()" data-i18n="button.downloadTxt">BAIXAR .TXT</button><button class="btn-large btn-sec" onclick="copyJson()" data-i18n="button.copyJson">COPIAR JSON</button><button class="btn-large btn-sec" style="font-size:0.8em; padding:8px;" onclick="document.getElementById('modalImport').style.display='flex'" data-i18n="button.importJson">IMPORTAR JSON</button></div>
                     <textarea id="hiddenJson" style="display:none;"></textarea>
                 </div>
                 
                 <div class="mods-main">
                     <div class="stats-header">
-                        <div><h2 style="margin:0; color:var(--accent);">MODS INSTALADOS</h2><div style="font-size:0.8em; color:#777;">Total: <span id="modCount">0</span></div></div>
+                        <div><h2 style="margin:0; color:var(--accent);" data-i18n="mods.installed">MODS INSTALADOS</h2><div style="font-size:0.8em; color:#777;"><span data-i18n="mods.totalLabel">Total:</span> <span id="modCount">0</span></div></div>
                         <div class="view-toggle-box">
-                            <button class="view-btn active" id="btnViewList" onclick="setModView('list')" title="Lista">≣</button>
-                            <button class="view-btn" id="btnViewGrid" onclick="setModView('grid')" title="Grade">▦</button>
+                            <button class="view-btn active" id="btnViewList" onclick="setModView('list')" title="Lista" data-i18n-title="view.list">≣</button>
+                            <button class="view-btn" id="btnViewGrid" onclick="setModView('grid')" title="Grade" data-i18n-title="view.grid">▦</button>
                         </div>
-                        <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:0.8em; font-weight:bold; color:#fff;">AUTO UPDATES</span><label class="switch"><input type="checkbox" id="chkGlobalAuto" onchange="toggleGlobalAutoUpdate()"><span class="slider"></span></label></div>
+                        <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:0.8em; font-weight:bold; color:#fff;" data-i18n="autoUpdates">AUTO UPDATES</span><label class="switch"><input type="checkbox" id="chkGlobalAuto" onchange="toggleGlobalAutoUpdate()"><span class="slider"></span></label></div>
                         <div style="text-align:right;"><div style="font-size:0.9em; font-weight:bold;" id="storageText">0 GB / 20 GB</div><div class="progress-track"><div class="progress-fill" id="storageFill"></div></div></div>
                     </div>
                     
                     <div style="display:flex; gap:10px; margin-top:15px; margin-bottom:10px;">
-                        <input id="quickMod" placeholder="Cole URL ou ID..." style="flex:1; background: #000; border: 1px solid #444; padding: 10px; color: #fff;">
-                        <button class="btn-large btn-primary" style="width:auto; padding:0 20px;" onclick="addMod()">ADICIONAR</button>
-                        <button class="btn-large" style="width:auto; background:var(--danger); color:#fff;" onclick="clearMods()">LIMPAR</button>
+                        <input id="quickMod" data-i18n-placeholder="placeholderModSearch" placeholder="Cole URL ou ID..." style="flex:1; background: #000; border: 1px solid #444; padding: 10px; color: #fff;">
+                        <button class="btn-large btn-primary" style="width:auto; padding:0 20px;" onclick="addMod()" data-i18n="button.addMod">ADICIONAR</button>
+                        <button class="btn-large" style="width:auto; background:var(--danger); color:#fff;" onclick="clearMods()" data-i18n="button.clearMods">LIMPAR</button>
                     </div>
-                    <div style="margin-bottom: 10px;"><input type="text" id="modSearch" placeholder="🔍 Filtrar por nome ou ID..." style="width:100%; background: #000; border: 1px solid #444; padding: 10px; color: var(--accent); box-sizing: border-box;" oninput="renderList()"></div>
+                    <div style="margin-bottom: 10px;"><input type="text" id="modSearch" data-i18n-placeholder="placeholderFilterMods" placeholder="🔍 Filtrar por nome ou ID..." style="width:100%; background: #000; border: 1px solid #444; padding: 10px; color: var(--accent); box-sizing: border-box;" oninput="renderList()"></div>
                     <div class="mod-list" id="modListContainer"></div>
                 </div>
             </div>
@@ -262,28 +262,27 @@
         <div id="view-monitor" class="view-section">
             <div class="bm-container">
                 <div class="bm-server-header">
-                    <div style="display:flex; align-items:center;"><span id="bmStatusDot" class="bm-status-indicator status-offline"></span><div><h2 id="bmServerName" style="margin:0; color:#fff; font-size: 1.4em;">Servidor Desconhecido</h2><div id="bmIp" style="color:#777; font-size:0.9em; margin-top:4px;">-</div></div></div>
-                    <div style="display:flex; gap:15px; align-items:center;"><input type="text" id="bmServerId" placeholder="ID Battlemetrics" style="width:200px; padding:10px; background:#111; color:#fff; border:1px solid #444; border-radius: 4px;"><button class="btn-primary" style="padding:10px 20px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;" onclick="loadBattlemetrics()">CARREGAR</button></div>
+                    <div style="display:flex; align-items:center;"><span id="bmStatusDot" class="bm-status-indicator status-offline"></span><div><h2 id="bmServerName" style="margin:0; color:#fff; font-size: 1.4em;" data-i18n="bm.unknown">Servidor Desconhecido</h2><div id="bmIp" style="color:#777; font-size:0.9em; margin-top:4px;">-</div></div></div>
+                    <div style="display:flex; gap:15px; align-items:center;"><input type="text" id="bmServerId" data-i18n-placeholder="placeholderBmId" placeholder="ID Battlemetrics" style="width:200px; padding:10px; background:#111; color:#fff; border:1px solid #444; border-radius: 4px;"><button class="btn-primary" style="padding:10px 20px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;" onclick="loadBattlemetrics()" data-i18n="button.loadBm">CARREGAR</button></div>
                 </div>
 
                 <div class="bm-dashboard-grid">
                     <div class="bm-info-panel">
-                        <div class="bm-info-row"><span class="bm-label">Rank</span><span class="bm-value" id="infoRank"># -</span></div>
-                        <div class="bm-info-row"><span class="bm-label">Player count</span><span class="bm-value" id="infoPlayers">-</span></div>
-                        <div class="bm-info-row"><span class="bm-label">Address</span><span class="bm-value" style="color:var(--accent);" id="infoAddress">-</span></div>
-                        <div class="bm-info-row"><span class="bm-label">Status</span><span class="bm-value" id="infoStatus">-</span></div>
-                        <div class="bm-info-row"><span class="bm-label">Country</span><span class="bm-value" id="infoCountry">-</span></div>
-                        <div class="bm-info-row"><span class="bm-label">Uptime</span><span class="bm-value" style="color:var(--success);" id="infoUptime">7 Days: 99%</span></div>
-                        <div class="bm-info-row"><span class="bm-label" style="margin-top:20px;">Scenario</span><span class="bm-value" style="margin-top:20px;" id="infoScenario">-</span></div>
-                        <div class="bm-info-row"><span class="bm-label">Password Protected</span><span class="bm-value" id="infoPass">-</span></div>
-                        <div class="bm-info-row"><span class="bm-label">BattlEye Enabled</span><span class="bm-value" id="infoBE">-</span></div>
-                        <div class="bm-info-row"><span class="bm-label">Official</span><span class="bm-value" id="infoOfficial">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label" data-i18n="bm.rank">Rank</span><span class="bm-value" id="infoRank"># -</span></div>
+                        <div class="bm-info-row"><span class="bm-label" data-i18n="bm.playerCount">Player count</span><span class="bm-value" id="infoPlayers">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label" data-i18n="bm.address">Address</span><span class="bm-value" style="color:var(--accent);" id="infoAddress">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label" data-i18n="bm.status">Status</span><span class="bm-value" id="infoStatus">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label" data-i18n="bm.country">Country</span><span class="bm-value" id="infoCountry">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label" style="margin-top:20px;" data-i18n="bm.scenario">Scenario</span><span class="bm-value" style="margin-top:20px;" id="infoScenario">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label" data-i18n="bm.passwordProtected">Password Protected</span><span class="bm-value" id="infoPass">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label" data-i18n="bm.battleyeEnabled">BattlEye Enabled</span><span class="bm-value" id="infoBE">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label" data-i18n="bm.official">Official</span><span class="bm-value" id="infoOfficial">-</span></div>
                     </div>
 
                     <div class="bm-charts-panel">
                         <div class="bm-chart-card chart-rank">
                             <div class="bm-chart-header">
-                                <h4 class="bm-chart-title">Server Rank</h4>
+                                <h4 class="bm-chart-title" data-i18n="bm.chartRank">Server Rank</h4>
                                 <div class="timeseries-range">
                                     <a class="active">7D</a><a>1M</a><a>3M</a>
                                 </div>
@@ -293,7 +292,7 @@
                         
                         <div class="bm-chart-card chart-players">
                             <div class="bm-chart-header">
-                                <h4 class="bm-chart-title">Player Count</h4>
+                                <h4 class="bm-chart-title" data-i18n="bm.chartPlayers">Player Count</h4>
                                 <div class="timeseries-range">
                                     <a class="active">24H</a><a>7D</a><a>30D</a>
                                 </div>
@@ -304,11 +303,11 @@
                 </div>
 
                 <div class="bm-table-container">
-                    <div class="bm-table-header">PLAYERS ONLINE</div>
+                    <div class="bm-table-header" data-i18n="bm.playersOnline">PLAYERS ONLINE</div>
                     <div class="bm-table-content">
                         <table class="bm-table">
-                            <thead><tr><th>Nome</th><th style="width:150px;">Score</th><th style="width:150px;">Tempo Jogado</th></tr></thead>
-                            <tbody id="bmPlayerTableBody"><tr><td colspan="3" style="text-align:center; padding:20px; color:#555;">Nenhum dado carregado.</td></tr></tbody>
+                            <thead><tr><th data-i18n="bm.playerName">Nome</th><th style="width:150px;" data-i18n="bm.score">Score</th><th style="width:150px;" data-i18n="bm.playTime">Tempo Jogado</th></tr></thead>
+                            <tbody id="bmPlayerTableBody"><tr><td colspan="3" style="text-align:center; padding:20px; color:#555;" data-i18n="bm.noData">Nenhum dado carregado.</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -318,24 +317,229 @@
         <div id="view-others" class="view-section">
             <div class="others-container">
                 <div class="col-half">
-                    <h3 style="color:var(--accent);">SERVER TERMINAL (Real-Time)</h3>
-                    <div class="terminal-box" id="backendLog"><div class="log-entry"><span class="log-time">[Init]</span><span class="log-info">Connecting to local console stream...</span></div></div>
+                    <h3 style="color:var(--accent);" data-i18n="others.serverTerminal">SERVER TERMINAL (Real-Time)</h3>
+                    <div class="terminal-box" id="backendLog"><div class="log-entry"><span class="log-time">[Init]</span><span class="log-info" data-i18n="others.connecting">Connecting to local console stream...</span></div></div>
                 </div>
                 <div class="col-half">
-                    <h3 style="color:var(--accent);">CONFIG MANAGEMENT</h3>
-                    <div class="backup-card"><div class="backup-status"><span>Status do Backup:</span><span id="backupStatusText" style="color:#888;">Desconhecido</span></div><div style="display:flex; gap:10px;"><button class="btn-large btn-primary" onclick="saveBackup()">SALVAR BACKUP (DISCO)</button><button class="btn-large btn-sec" onclick="loadBackup()">CARREGAR DO DISCO</button></div></div>
-                    <span class="sidebar-label" style="margin-top:20px;">JSON PREVIEW</span><textarea style="height:150px; font-family:monospace; color:#aaa; background:#111; border:1px solid #333;" readonly id="jsonCleanArea"></textarea>
+                    <h3 style="color:var(--accent);" data-i18n="others.configManagement">CONFIG MANAGEMENT</h3>
+                    <div class="backup-card"><div class="backup-status"><span data-i18n="backup.status">Status do Backup:</span><span id="backupStatusText" style="color:#888;" data-i18n="backup.unknown">Desconhecido</span></div><div style="display:flex; gap:10px;"><button class="btn-large btn-primary" onclick="saveBackup()" data-i18n="button.saveBackup">SALVAR BACKUP (DISCO)</button><button class="btn-large btn-sec" onclick="loadBackup()" data-i18n="button.loadBackup">CARREGAR DO DISCO</button></div></div>
+                    <span class="sidebar-label" style="margin-top:20px;" data-i18n="backup.jsonPreview">JSON PREVIEW</span><textarea style="height:150px; font-family:monospace; color:#aaa; background:#111; border:1px solid #333;" readonly id="jsonCleanArea"></textarea>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="modalImport" class="modal"><div class="modal-box"><h3 style="color:var(--accent);">IMPORTAR CONFIG</h3><textarea id="importText" rows="10" style="background:#000; color:#fff; width:100%; font-family:monospace;"></textarea><br><br><button class="btn-large btn-primary" onclick="processImport()">PROCESSAR</button><button class="btn-large btn-sec" style="margin-top:5px;" onclick="document.getElementById('modalImport').style.display='none'">CANCELAR</button></div></div>
+    <div id="modalImport" class="modal"><div class="modal-box"><h3 style="color:var(--accent);" data-i18n="modal.importConfig">IMPORTAR CONFIG</h3><textarea id="importText" rows="10" style="background:#000; color:#fff; width:100%; font-family:monospace;"></textarea><br><br><button class="btn-large btn-primary" onclick="processImport()" data-i18n="button.processImport">PROCESSAR</button><button class="btn-large btn-sec" style="margin-top:5px;" onclick="document.getElementById('modalImport').style.display='none'" data-i18n="button.cancel">CANCELAR</button></div></div>
 
 <script>
         // --- INICIALIZAÇÃO E INTEGRAÇÃO ELECTRON ---
         const { ipcRenderer } = require('electron');
-        
+
+        const TRANSLATIONS_INDEX = {
+            'pt-BR': {
+                title: 'Arma Reforger Manager',
+                'nav.general': 'Geral',
+                'nav.rcon': 'RCON',
+                'nav.monitor': 'Monitor',
+                'nav.others': 'Outros',
+                'sidebar.serverName': 'SERVER NAME',
+                'placeholderNameSuffix': 'Texto livre...',
+                'sidebar.network': 'NETWORK (SERVER BIND)',
+                'bindAddress': 'BIND ADDRESS',
+                'publicAddress': 'PUBLIC ADDRESS',
+                'placeholderPublicIp': 'Ex: 189.x.x.x',
+                'sidebar.serverAdmins': 'SERVER ADMINS',
+                'placeholderUuid': 'UUID...',
+                'adminPassword': 'Admin Password:',
+                'label.password': 'Senha',
+                'placeholderPassword': 'Senha...',
+                'sidebar.maxPlayers': 'MAX PLAYERS',
+                'sidebar.scenarioId': 'SCENARIO ID',
+                'scenario.default1': 'Conflict - Everon',
+                'scenario.default2': 'Conflict - Arland',
+                'scenario.custom': 'Cenário Customizado...',
+                'placeholderScenarioCustom': '{GUID}Missions/Nome.conf',
+                'label.visible': 'VISIBLE',
+                'label.no3rd': 'NO 3RD PERSON',
+                'label.battleye': 'BATTLEYE',
+                'button.downloadTxt': 'BAIXAR .TXT',
+                'button.copyJson': 'COPIAR JSON',
+                'button.importJson': 'IMPORTAR JSON',
+                'mods.installed': 'MODS INSTALADOS',                'mods.totalLabel': 'Total:',                'mods.total': 'Total: <span id="modCount">0</span>',
+                'view.list': 'Lista',
+                'view.grid': 'Grade',
+                'autoUpdates': 'AUTO UPDATES',
+                'placeholderModSearch': 'Cole URL ou ID...',
+                'button.addMod': 'ADICIONAR',
+                'button.clearMods': 'LIMPAR',
+                'placeholderFilterMods': '🔍 Filtrar por nome ou ID...',
+                'mods.of': 'de',
+                'rcon.title': 'RCON MANAGER',
+                'rcon.notEnabled': 'Recurso não ativado no JSON',
+                'rcon.install': 'INSTALAR RCON',
+                'rcon.configHeader': 'CONFIGURAÇÃO DO SERVIDOR (JSON)',
+                'rcon.bindIp': 'Bind IP (Server)',
+                'rcon.port': 'Port (UDP)',
+                'rcon.password': 'Password',
+                'rcon.permission': 'Permission',
+                'rcon.remove': 'REMOVER RCON DO JSON',
+                'rcon.terminal': 'TERMINAL DE COMANDO',
+                'rcon.status': 'Status:',
+                'rcon.ready': 'Painel pronto.',
+                'rcon.connectIp': 'IP CONEXÃO',
+                'rcon.command': 'COMANDO',
+                'placeholderRconCommand': 'Ex: #kick player...',
+                'button.sendRcon': 'ENVIAR',
+                'button.connectRcon': 'CONECTAR',
+                'bm.unknown': 'Servidor Desconhecido',
+                'placeholderBmId': 'ID Battlemetrics',
+                'button.loadBm': 'CARREGAR',
+                'bm.rank': 'Rank',
+                'bm.playerCount': 'Player count',
+                'bm.address': 'Address',
+                'bm.status': 'Status',
+                'bm.country': 'Country',
+                'bm.scenario': 'Scenario',
+                'bm.passwordProtected': 'Password Protected',
+                'bm.battleyeEnabled': 'BattlEye Enabled',
+                'bm.official': 'Official',
+                'bm.chartRank': 'Server Rank',
+                'bm.chartPlayers': 'Player Count',
+                'bm.playersOnline': 'PLAYERS ONLINE',
+                'bm.playerName': 'Nome',
+                'bm.score': 'Score',
+                'bm.playTime': 'Tempo Jogado',
+                'bm.noData': 'Nenhum dado carregado.',
+                'others.serverTerminal': 'SERVER TERMINAL (Real-Time)',
+                'others.connecting': 'Connecting to local console stream...',
+                'others.configManagement': 'CONFIG MANAGEMENT',
+                'backup.status': 'Status do Backup:',
+                'backup.unknown': 'Desconhecido',
+                'button.saveBackup': 'SALVAR BACKUP (DISCO)',
+                'button.loadBackup': 'CARREGAR DO DISCO',
+                'backup.jsonPreview': 'JSON PREVIEW',
+                'modal.importConfig': 'IMPORTAR CONFIG',
+                'button.processImport': 'PROCESSAR',
+                'button.cancel': 'CANCELAR'
+            },
+            'en-US': {
+                title: 'Arma Reforger Manager',
+                'nav.general': 'General',
+                'nav.rcon': 'RCON',
+                'nav.monitor': 'Monitor',
+                'nav.others': 'Others',
+                'sidebar.serverName': 'SERVER NAME',
+                'placeholderNameSuffix': 'Free text...',
+                'sidebar.network': 'NETWORK (SERVER BIND)',
+                'bindAddress': 'BIND ADDRESS',
+                'publicAddress': 'PUBLIC ADDRESS',
+                'placeholderPublicIp': 'Ex: 189.x.x.x',
+                'sidebar.serverAdmins': 'SERVER ADMINS',
+                'placeholderUuid': 'UUID...',
+                'adminPassword': 'Admin Password:',
+                'label.password': 'Password',
+                'placeholderPassword': 'Password...',
+                'sidebar.maxPlayers': 'MAX PLAYERS',
+                'sidebar.scenarioId': 'SCENARIO ID',
+                'scenario.default1': 'Conflict - Everon',
+                'scenario.default2': 'Conflict - Arland',
+                'scenario.custom': 'Custom Scenario...',
+                'placeholderScenarioCustom': '{GUID}Missions/Name.conf',
+                'label.visible': 'VISIBLE',
+                'label.no3rd': 'NO 3RD PERSON',
+                'label.battleye': 'BATTLEYE',
+                'button.downloadTxt': 'DOWNLOAD .TXT',
+                'button.copyJson': 'COPY JSON',
+                'button.importJson': 'IMPORT JSON',
+                'mods.installed': 'INSTALLED MODS',
+                'mods.totalLabel': 'Total:',
+                'mods.total': 'Total: <span id="modCount">0</span>',
+                'view.list': 'List',
+                'view.grid': 'Grid',
+                'autoUpdates': 'AUTO UPDATES',
+                'placeholderModSearch': 'Paste URL or ID...',
+                'button.addMod': 'ADD',
+                'button.clearMods': 'CLEAR',
+                'placeholderFilterMods': '🔍 Filter by name or ID...',
+                'mods.of': 'of',
+                'rcon.title': 'RCON MANAGER',
+                'rcon.notEnabled': 'Feature not enabled in JSON',
+                'rcon.install': 'INSTALL RCON',
+                'rcon.configHeader': 'SERVER CONFIGURATION (JSON)',
+                'rcon.bindIp': 'Bind IP (Server)',
+                'rcon.port': 'Port (UDP)',
+                'rcon.password': 'Password',
+                'rcon.permission': 'Permission',
+                'rcon.remove': 'REMOVE RCON FROM JSON',
+                'rcon.terminal': 'COMMAND TERMINAL',
+                'rcon.status': 'Status:',
+                'rcon.ready': 'Panel ready.',
+                'rcon.connectIp': 'CONNECT IP',
+                'rcon.command': 'COMMAND',
+                'placeholderRconCommand': 'Ex: #kick player...',
+                'button.sendRcon': 'SEND',
+                'button.connectRcon': 'CONNECT',
+                'bm.unknown': 'Unknown Server',
+                'placeholderBmId': 'Battlemetrics ID',
+                'button.loadBm': 'LOAD',
+                'bm.rank': 'Rank',
+                'bm.playerCount': 'Player count',
+                'bm.address': 'Address',
+                'bm.status': 'Status',
+                'bm.country': 'Country',
+                'bm.scenario': 'Scenario',
+                'bm.passwordProtected': 'Password Protected',
+                'bm.battleyeEnabled': 'BattlEye Enabled',
+                'bm.official': 'Official',
+                'bm.chartRank': 'Server Rank',
+                'bm.chartPlayers': 'Player Count',
+                'bm.playersOnline': 'PLAYERS ONLINE',
+                'bm.playerName': 'Name',
+                'bm.score': 'Score',
+                'bm.playTime': 'Play Time',
+                'bm.noData': 'No data loaded.',
+                'others.serverTerminal': 'SERVER TERMINAL (Real-Time)',
+                'others.connecting': 'Connecting to local console stream...',
+                'others.configManagement': 'CONFIG MANAGEMENT',
+                'backup.status': 'Backup Status:',
+                'backup.unknown': 'Unknown',
+                'button.saveBackup': 'SAVE BACKUP (DISK)',
+                'button.loadBackup': 'LOAD FROM DISK',
+                'backup.jsonPreview': 'JSON PREVIEW',
+                'modal.importConfig': 'IMPORT CONFIG',
+                'button.processImport': 'PROCESS',
+                'button.cancel': 'CANCEL'
+            }
+        };
+
+        function getAppLanguage() {
+            return localStorage.getItem('appLang') || 'pt-BR';
+        }
+
+        function t(key) {
+            const lang = getAppLanguage();
+            return TRANSLATIONS_INDEX[lang][key] || TRANSLATIONS_INDEX['pt-BR'][key] || key;
+        }
+
+        function applyLocale() {
+            const lang = getAppLanguage();
+            document.documentElement.lang = lang;
+            document.title = t('title');
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.dataset.i18n;
+                if (key) el.innerText = t(key);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.dataset.i18nPlaceholder;
+                if (key) el.placeholder = t(key);
+            });
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.dataset.i18nTitle;
+                if (key) el.title = t(key);
+            });
+        }
+
         // Listener: Ouve o pedido de fechamento do main.js
         ipcRenderer.on('app-closing', async () => {
             await saveBackup(true); // Salva silenciosamente (true)
@@ -358,6 +562,7 @@
 
         const API_BASE = "http://localhost:3000"; 
         const socket = io(API_BASE);
+        applyLocale();
 
         // --- RENDER MODS LOGIC ---
         function setModView(mode) {
@@ -397,7 +602,8 @@
             }); 
             const tGB=totalBytes/1024/1024/1024; document.getElementById('storageText').innerText=`${tGB.toFixed(2)} GB / 20 GB`; 
             const bar=document.getElementById('storageFill'); if(bar){bar.style.width=Math.min((tGB/20)*100,100)+'%'; bar.style.background=tGB>20?'var(--danger)':'var(--accent)';} 
-            document.getElementById('modCount').innerText=term?`${visibleCount} de ${modList.length}`:modList.length; updateJson(); 
+            const countText = term ? `${visibleCount} ${t('mods.of')} ${modList.length}` : modList.length;
+            document.getElementById('modCount').innerText = countText; updateJson(); 
         }
 
         // --- SOCKET.IO EVENTS ---

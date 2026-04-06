@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arma Reforger Manager</title>
+    
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+
+    <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/chartist.js/latest/chartist.min.css">
+    <script src="https://cdn.jsdelivr.net/chartist.js/latest/chartist.min.js"></script>
+
+    <script>if (window.module) module = window.module;</script>
+    <style>
+        :root { --bg-color: #121212; --panel-bg: #1e1e1e; --accent: #d4e157; --accent-hover: #afb42b; --text: #e0e0e0; --text-muted: #888; --input-bg: #0b0b0b; --border: #333; --danger: #ef5350; --success: #66bb6a; --nav-width-collapsed: 60px; --nav-width-expanded: 220px; }
+        body { font-family: 'Segoe UI', 'Roboto', monospace; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+
+        /* UI GERAL */
+        .main-nav { width: var(--nav-width-collapsed); background: #000; border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.3s ease; z-index: 100; flex-shrink: 0; overflow: hidden; }
+        .main-nav.expanded { width: var(--nav-width-expanded); }
+        .nav-header { height: 60px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .nav-header:hover { background: #111; }
+        .nav-icon-menu { font-size: 1.5em; color: var(--accent); user-select: none; }
+        .nav-item { display: flex; align-items: center; height: 50px; cursor: pointer; color: #777; transition: 0.2s; white-space: nowrap; }
+        .nav-item:hover { background: #111; color: #fff; }
+        .nav-item.active { background: rgba(212, 225, 87, 0.1); color: var(--accent); border-right: 3px solid var(--accent); }
+        .nav-icon-box { width: 60px; min-width: 60px; display: flex; justify-content: center; align-items: center; font-size: 1.2em; }
+        .nav-label { opacity: 0; transition: opacity 0.2s; margin-left: 10px; font-weight: bold; font-size: 0.9em; text-transform: uppercase; }
+        .main-nav.expanded .nav-label { opacity: 1; }
+
+        .content-viewport { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .view-section { display: none; width: 100%; height: 100%; overflow: hidden; }
+        .view-section.active { display: flex; }
+        .layout-split { display: flex; width: 100%; height: 100%; }
+        
+        .config-sidebar { width: 380px; background: var(--panel-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; overflow-y: auto; gap: 15px; box-sizing: border-box; flex-shrink: 0; }
+        .mods-main { flex: 1; padding: 20px; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-color); }
+
+        .sidebar-label { font-size: 0.8em; color: var(--accent); font-weight: bold; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        .input-group { display: flex; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+        .prefix-span { padding: 10px; background: #2a2a2a; color: #888; font-size: 0.85em; white-space: nowrap; border-right: 1px solid var(--border); display: flex; align-items: center; }
+        input, select, textarea { background: var(--input-bg); border: 1px solid var(--border); color: white; padding: 10px; width: 100%; box-sizing: border-box; font-family: inherit; border-radius: 4px; outline: none; }
+        .input-group input { border: none; border-radius: 0; }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+        
+        .admin-box { background: var(--input-bg); border: 1px solid var(--border); min-height: 40px; max-height: 150px; overflow-y: auto; border-radius: 4px; margin-bottom: 10px; display: flex; flex-direction: column; }
+        .admin-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #222; font-size: 0.9em; }
+        .btn-add { background: var(--accent); color: #000; font-weight: bold; border: none; cursor: pointer; width: 40px; }
+        .btn-remove { color: var(--danger); cursor: pointer; font-weight: bold; }
+        .switch-row { display: flex; justify-content: space-between; align-items: center; background: #000; padding: 10px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 5px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .sidebar-footer { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+        .btn-large { padding: 12px; border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; cursor: pointer; width: 100%; transition: 0.2s;}
+        .btn-large:hover { opacity: 0.9; }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-sec { background: #444; color: #fff; }
+
+        .stats-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--panel-bg); padding: 15px; border: 1px solid var(--border); }
+        
+        /* MOD LIST */
+        .mod-list { flex: 1; overflow-y: auto; background: #181818; border: 1px solid var(--border); padding: 5px; }
+        
+        /* LIST VIEW */
+        .mod-item { display: flex; padding: 10px; background: var(--panel-bg); border-bottom: 1px solid #333; margin-bottom: 2px; gap: 15px; flex-direction: column; align-items: stretch; }
+        .mod-content-row { display: flex; align-items: center; gap: 15px; width: 100%; }
+        .mod-thumb { width: 80px; height: 50px; background: #000; object-fit: cover; border-radius: 4px; border: 1px solid #333; cursor: pointer; transition: 0.2s; }
+        .mod-thumb:hover { border-color: var(--accent); opacity: 0.8; }
+        .mod-info { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .mod-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+        /* GRID VIEW */
+        .mod-list.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; padding: 15px; align-content: start; }
+        .mod-list.grid-view .mod-item { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 6px; padding: 0; overflow: hidden; margin-bottom: 0; background: #222; height: auto; min-height: 260px; }
+        .mod-list.grid-view .mod-content-row { flex-direction: column; align-items: stretch; gap: 0; flex: 1; }
+        .mod-list.grid-view .mod-thumb { width: 100%; height: 140px; border-radius: 0; border: none; border-bottom: 1px solid #333; }
+        .mod-list.grid-view .mod-info { padding: 12px; justify-content: flex-start; flex: 0 0 auto; }
+        .mod-list.grid-view .mod-actions { margin-top: auto; padding: 10px 12px; border-top: 1px solid #333; width: 100%; box-sizing: border-box; background: #1a1a1a; justify-content: space-between; }
+
+        .btn-auto { background: none; border: 1px solid #555; color: #555; cursor: pointer; font-weight: bold; padding: 5px 10px; border-radius: 4px; margin-right: 5px; transition: 0.2s; font-size: 0.8em; display: flex; align-items: center; gap: 5px; }
+        .btn-auto.active { border-color: var(--success); color: var(--success); background: rgba(102, 187, 106, 0.1); }
+        .dep-alert-box { margin-top: 10px; padding: 12px; background: rgba(212, 225, 87, 0.05); border: 1px dashed var(--accent); border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-install-all { background: var(--accent); color: #000; border: none; padding: 6px 12px; border-radius: 3px; font-size: 0.75em; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .progress-track { width: 200px; height: 10px; background: #333; border-radius: 5px; overflow: hidden; margin-top: 5px; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99; justify-content:center; align-items:center; }
+        .modal-box { background: var(--panel-bg); padding:20px; width:500px; border:1px solid var(--accent); }
+        .view-toggle-box { display: flex; background: #111; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin-right: 15px; }
+        .view-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; color: #555; font-size: 1.1em; transition: 0.2s; }
+        .view-btn:hover { color: #fff; background: #222; }
+        .view-btn.active { color: var(--accent); background: #222; }
+
+        /* --- RCON & OTHERS --- */
+        .rcon-container { padding: 30px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; max-width: 1200px; margin: 0 auto; width: 100%; }
+        .rcon-install-state { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #333; border-radius: 8px; background: rgba(0,0,0,0.3); }
+        .rcon-active-state { display: none; flex-direction: column; height: 100%; }
+        .rcon-config-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; background: var(--panel-bg); padding: 20px; border-radius: 4px; border: 1px solid var(--border); }
+        .console-window { flex: 1; background: #000; border: 1px solid #333; border-radius: 4px; padding: 15px; font-family: 'Consolas', monospace; color: #ddd; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
+        .console-line { border-bottom: 1px solid #111; padding-bottom: 2px; }
+        .console-line.cmd { color: var(--accent); }
+        .console-line.res { color: #888; white-space: pre-wrap; }
+        .others-container { padding: 30px; height: 100%; box-sizing: border-box; display: flex; gap: 30px; overflow-y: auto;}
+        .col-half { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 400px; }
+        .terminal-box { background: #0d0d0d; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; padding: 15px; border-radius: 6px; flex: 1; overflow-y: auto; border: 1px solid #333; font-size: 0.85em; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 2px; }
+        .log-entry { word-break: break-all; }
+        .log-error { color: #ff6b6b; }
+        .log-info { color: #e0e0e0; }
+        .log-time { color: #555; margin-right: 10px; user-select: none; }
+        .backup-card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .backup-status { font-size: 0.9em; color: #777; display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 5px; }
+
+        /* --- MONITOR / BATTLEMETRICS STYLE (UPDATED) --- */
+        .bm-container { padding: 40px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; overflow-y: auto; gap: 30px; max-width: 1400px; margin: 0 auto; width: 100%; }
+        
+        .bm-server-header { background: #222; border: 1px solid #333; border-radius: 6px; padding: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .bm-status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status-online { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        .status-offline { background: var(--danger); }
+        
+        /* Layout Grid: Info (Left) | Charts (Right) */
+        .bm-dashboard-grid { display: flex; gap: 20px; min-height: 400px; }
+        
+        /* INFO LIST STYLE */
+        .bm-info-panel { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
+        .bm-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2a2a; font-size: 0.9em; }
+        .bm-info-row:last-child { border-bottom: none; }
+        .bm-label { color: #fff; font-weight: bold; text-align: right; width: 140px; }
+        .bm-value { color: #aaa; text-align: right; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bm-flag { margin-right: 5px; font-size: 1.1em; }
+
+        /* CHARTS STYLE */
+        .bm-charts-panel { flex: 1; display: flex; gap: 20px; }
+        .bm-chart-card { flex: 1; background: var(--panel-bg); border: 1px solid #333; border-radius: 6px; padding: 15px; display: flex; flex-direction: column; }
+        .bm-chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .bm-chart-title { font-size: 1.1em; color: #fff; margin: 0; font-weight: normal; }
+        .timeseries-range a { color: #555; text-decoration: none; font-size: 0.8em; margin-left: 10px; font-weight: bold; cursor: pointer; }
+        .timeseries-range a.active { color: var(--accent); }
+        .chart-wrapper { flex: 1; position: relative; min-height: 200px; }
+
+        /* Chartist Overrides for Dark Mode */
+        .ct-label { color: #666; font-size: 0.75rem; }
+        .ct-grid { stroke: #333; stroke-dasharray: 0; stroke-width: 1px; }
+        
+        /* Rank Chart Colors (Orange/Yellow) */
+        .chart-rank .ct-series-a .ct-line, .chart-rank .ct-series-a .ct-point { stroke: #f0ad4e; }
+        .chart-rank .ct-series-a .ct-area { fill: #f0ad4e; fill-opacity: 0.1; }
+        
+        /* Players Chart Colors (Blue) */
+        .chart-players .ct-series-a .ct-line, .chart-players .ct-series-a .ct-point { stroke: #5bc0de; }
+        .chart-players .ct-series-a .ct-area { fill: #5bc0de; fill-opacity: 0.1; }
+
+        .bm-table-container { background: var(--panel-bg); border: 1px solid #333; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 300px; }
+        .bm-table-header { padding: 15px 20px; background: #111; border-bottom: 1px solid #333; font-weight: bold; color: var(--accent); font-size: 1em; letter-spacing: 1px; }
+        .bm-table-content { flex: 1; overflow-y: auto; }
+        .bm-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        .bm-table th, .bm-table td { text-align: left; padding: 12px 20px; border-bottom: 1px solid #2a2a2a; }
+        .bm-table th { background: #151515; position: sticky; top: 0; color: #888; font-size: 0.8em; text-transform: uppercase; }
+        .bm-table tr:hover { background: #252525; }
+    </style>
+</head>
+<body>
+
+    <nav class="main-nav" id="mainNav">
+        <div class="nav-header" onclick="toggleNav()">
+            <div class="nav-icon-box"><span class="nav-icon-menu">☰</span></div>
+        </div>
+        <div class="nav-item active" onclick="switchView('general', this)">
+            <div class="nav-icon-box">⚙️</div><span class="nav-label">Geral</span>
+        </div>
+        <div class="nav-item" onclick="switchView('rcon', this)">
+            <div class="nav-icon-box">💻</div><span class="nav-label">RCON</span>
+        </div>
+        <div class="nav-item" onclick="switchView('monitor', this)">
+            <div class="nav-icon-box">📈</div><span class="nav-label">Monitor</span>
+        </div>
+        <div class="nav-item" onclick="switchView('others', this)">
+            <div class="nav-icon-box">🔧</div><span class="nav-label">Outros</span>
+        </div>
+    </nav>
+
+    <div class="content-viewport">
+        <div id="view-general" class="view-section active">
+            <div class="layout-split">
+                <div class="config-sidebar">
+                    <div><span class="sidebar-label">SERVER NAME</span><div class="input-group"><input type="text" id="confNamePrefix" value="[BRASIL/LATAM] BRS Core | " style="width:160px; font-size:0.8em;" oninput="updateJson()"><input type="text" id="confNameSuffix" placeholder="Texto livre..." oninput="updateJson()"></div></div>
+                    <div>
+                        <span class="sidebar-label">NETWORK (SERVER BIND)</span>
+                        <div style="display:flex; gap:10px;">
+                            <div style="flex:1;"><span style="font-size:0.7em; color:#777;">BIND ADDRESS</span><input type="text" id="confBindIp" value="0.0.0.0" oninput="updateJson()"></div>
+                            <div style="flex:1;"><span style="font-size:0.7em; color:#777;">PUBLIC ADDRESS</span><input type="text" id="confPublicIp" placeholder="Ex: 189.x.x.x" oninput="updateJson()"></div>
+                        </div>
+                    </div>
+                    <div><span class="sidebar-label">SERVER ADMINS</span><div class="input-group" style="margin-bottom: 5px;"><input type="text" id="newAdmin" placeholder="UUID..."><button class="btn-add" onclick="addAdmin()">+</button></div><div class="admin-box" id="adminList"></div><span class="sidebar-label" style="text-transform:none; color:#777; font-size:0.7em;">Admin Password:</span><input type="text" id="confAdminPass" value="kiichi" style="font-size:0.8em; padding:6px; background:#111;" oninput="updateJson()"></div>
+                    <div><div class="switch-row"><span style="font-weight:bold; font-size:0.9em;">Senha</span><label class="switch"><input type="checkbox" id="chkPass" onchange="togglePass()"><span class="slider"></span></label></div><input type="text" id="confPass" placeholder="Senha..." style="display:none;" oninput="updateJson()"></div>
+                    <div><span class="sidebar-label">MAX PLAYERS</span><select id="confPlayers" onchange="updateJson()"><option value="32">32</option><option value="64">64</option><option value="128" selected>128</option></select></div>
+                    <div><span class="sidebar-label">SCENARIO ID</span><select id="confScenario" onchange="toggleScenarioManual()"><option value="{9002E94F303DD941}Missions/23_Campaign_North.conf">Conflict - Everon</option><option value="{C78D276F55060411}Missions/17_Campaign_Arland.conf">Conflict - Arland</option><option value="custom">Cenário Customizado...</option></select><input type="text" id="scenarioCustom" placeholder="{GUID}Missions/Nome.conf" style="display:none; margin-top: 8px; border-color: var(--accent); font-size: 0.85em;" oninput="updateJson()"></div>
+                    <hr style="width:100%; border-color:#333; margin: 10px 0;">
+                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;">VISIBLE</span><label class="switch"><input type="checkbox" id="chkVis" checked onchange="updateJson()"><span class="slider"></span></label></div>
+                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;">NO 3RD PERSON</span><label class="switch"><input type="checkbox" id="chk3rd" checked onchange="updateJson()"><span class="slider"></span></label></div>
+                    <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;">BATTLEYE</span><label class="switch"><input type="checkbox" id="chkBE" onchange="updateJson()"><span class="slider"></span></label></div>
+                    <div class="sidebar-footer"><button class="btn-large btn-primary" onclick="downloadTxt()">BAIXAR .TXT</button><button class="btn-large btn-sec" onclick="copyJson()">COPIAR JSON</button><button class="btn-large btn-sec" style="font-size:0.8em; padding:8px;" onclick="document.getElementById('modalImport').style.display='flex'">IMPORTAR JSON</button></div>
+                    <textarea id="hiddenJson" style="display:none;"></textarea>
+                </div>
+                
+                <div class="mods-main">
+                    <div class="stats-header">
+                        <div><h2 style="margin:0; color:var(--accent);">MODS INSTALADOS</h2><div style="font-size:0.8em; color:#777;">Total: <span id="modCount">0</span></div></div>
+                        <div class="view-toggle-box">
+                            <button class="view-btn active" id="btnViewList" onclick="setModView('list')" title="Lista">≣</button>
+                            <button class="view-btn" id="btnViewGrid" onclick="setModView('grid')" title="Grade">▦</button>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:0.8em; font-weight:bold; color:#fff;">AUTO UPDATES</span><label class="switch"><input type="checkbox" id="chkGlobalAuto" onchange="toggleGlobalAutoUpdate()"><span class="slider"></span></label></div>
+                        <div style="text-align:right;"><div style="font-size:0.9em; font-weight:bold;" id="storageText">0 GB / 20 GB</div><div class="progress-track"><div class="progress-fill" id="storageFill"></div></div></div>
+                    </div>
+                    
+                    <div style="display:flex; gap:10px; margin-top:15px; margin-bottom:10px;">
+                        <input id="quickMod" placeholder="Cole URL ou ID..." style="flex:1; background: #000; border: 1px solid #444; padding: 10px; color: #fff;">
+                        <button class="btn-large btn-primary" style="width:auto; padding:0 20px;" onclick="addMod()">ADICIONAR</button>
+                        <button class="btn-large" style="width:auto; background:var(--danger); color:#fff;" onclick="clearMods()">LIMPAR</button>
+                    </div>
+                    <div style="margin-bottom: 10px;"><input type="text" id="modSearch" placeholder="🔍 Filtrar por nome ou ID..." style="width:100%; background: #000; border: 1px solid #444; padding: 10px; color: var(--accent); box-sizing: border-box;" oninput="renderList()"></div>
+                    <div class="mod-list" id="modListContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-rcon" class="view-section">
+            <div class="rcon-container">
+                <h2 style="color:var(--accent); border-bottom:1px solid #333; padding-bottom:10px;">RCON MANAGER</h2>
+                <div id="rconInstallUI" class="rcon-install-state">
+                    <h3 style="color:#777; margin-bottom: 10px;">Recurso não ativado no JSON</h3>
+                    <button class="btn-large btn-primary" style="width: 250px;" onclick="installRcon()">INSTALAR RCON</button>
+                </div>
+                <div id="rconConfigUI" class="rcon-active-state">
+                    <div class="rcon-config-grid">
+                        <div style="grid-column: span 4; font-size:0.8em; color:#666; border-bottom:1px solid #333; margin-bottom:5px;">CONFIGURAÇÃO DO SERVIDOR (JSON)</div>
+                        <div><span class="sidebar-label">Bind IP (Server)</span><input type="text" id="rconBindIp" value="0.0.0.0" oninput="updateJson()"></div>
+                        <div><span class="sidebar-label">Port (UDP)</span><input type="number" id="rconPort" value="19999" oninput="updateJson()"></div>
+                        <div><span class="sidebar-label">Password</span><input type="text" id="rconPass" value="" oninput="updateJson()"></div>
+                        <div><span class="sidebar-label">Permission</span><select id="rconPerm" onchange="updateJson()"><option value="admin">admin</option><option value="monitor">monitor</option></select></div>
+                        <div style="grid-column: span 4; display: flex; justify-content: flex-end; margin-top: 10px;"><button class="btn-auto" style="border-color: var(--danger); color: var(--danger);" onclick="removeRcon()">REMOVER RCON DO JSON</button></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px; margin-top:20px;"><span class="sidebar-label" style="margin:0; font-size:1em; color:#fff;">TERMINAL DE COMANDO</span><div style="font-size:0.8em; color:#555;">Status: <span id="rconStatusText" style="color:var(--danger)">Disconnected</span></div></div>
+                    <div class="console-window" id="rconConsole"><div class="console-line res">Painel pronto.</div></div>
+                    <div style="display:flex; gap:10px; align-items:flex-end; background:#111; padding:10px; border:1px solid #333; border-radius:4px;">
+                        <div style="width:150px;"><span style="font-size:0.7em; color:#777; display:block; margin-bottom:2px;">IP CONEXÃO</span><input type="text" id="rconConnectIp" value="127.0.0.1" style="background:#000; padding:8px;"></div>
+                        <div style="flex:1;"><span style="font-size:0.7em; color:#777; display:block; margin-bottom:2px;">COMANDO</span><input type="text" id="rconCommandInput" placeholder="Ex: #kick player..." onkeypress="handleRconEnter(event)"></div>
+                        <button class="btn-large btn-primary" style="width:auto; height:38px;" onclick="sendRconCommand()">ENVIAR</button>
+                        <button id="btnConnectRcon" class="btn-large btn-sec" style="width:auto; height:38px;" onclick="realConnectRcon()">CONECTAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-monitor" class="view-section">
+            <div class="bm-container">
+                <div class="bm-server-header">
+                    <div style="display:flex; align-items:center;"><span id="bmStatusDot" class="bm-status-indicator status-offline"></span><div><h2 id="bmServerName" style="margin:0; color:#fff; font-size: 1.4em;">Servidor Desconhecido</h2><div id="bmIp" style="color:#777; font-size:0.9em; margin-top:4px;">-</div></div></div>
+                    <div style="display:flex; gap:15px; align-items:center;"><input type="text" id="bmServerId" placeholder="ID Battlemetrics" style="width:200px; padding:10px; background:#111; color:#fff; border:1px solid #444; border-radius: 4px;"><button class="btn-primary" style="padding:10px 20px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;" onclick="loadBattlemetrics()">CARREGAR</button></div>
+                </div>
+
+                <div class="bm-dashboard-grid">
+                    <div class="bm-info-panel">
+                        <div class="bm-info-row"><span class="bm-label">Rank</span><span class="bm-value" id="infoRank"># -</span></div>
+                        <div class="bm-info-row"><span class="bm-label">Player count</span><span class="bm-value" id="infoPlayers">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label">Address</span><span class="bm-value" style="color:var(--accent);" id="infoAddress">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label">Status</span><span class="bm-value" id="infoStatus">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label">Country</span><span class="bm-value" id="infoCountry">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label">Uptime</span><span class="bm-value" style="color:var(--success);" id="infoUptime">7 Days: 99%</span></div>
+                        <div class="bm-info-row"><span class="bm-label" style="margin-top:20px;">Scenario</span><span class="bm-value" style="margin-top:20px;" id="infoScenario">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label">Password Protected</span><span class="bm-value" id="infoPass">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label">BattlEye Enabled</span><span class="bm-value" id="infoBE">-</span></div>
+                        <div class="bm-info-row"><span class="bm-label">Official</span><span class="bm-value" id="infoOfficial">-</span></div>
+                    </div>
+
+                    <div class="bm-charts-panel">
+                        <div class="bm-chart-card chart-rank">
+                            <div class="bm-chart-header">
+                                <h4 class="bm-chart-title">Server Rank</h4>
+                                <div class="timeseries-range">
+                                    <a class="active">7D</a><a>1M</a><a>3M</a>
+                                </div>
+                            </div>
+                            <div id="chartRank" class="chart-wrapper ct-chart ct-golden-section"></div>
+                        </div>
+                        
+                        <div class="bm-chart-card chart-players">
+                            <div class="bm-chart-header">
+                                <h4 class="bm-chart-title">Player Count</h4>
+                                <div class="timeseries-range">
+                                    <a class="active">24H</a><a>7D</a><a>30D</a>
+                                </div>
+                            </div>
+                            <div id="chartPlayers" class="chart-wrapper ct-chart ct-golden-section"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bm-table-container">
+                    <div class="bm-table-header">PLAYERS ONLINE</div>
+                    <div class="bm-table-content">
+                        <table class="bm-table">
+                            <thead><tr><th>Nome</th><th style="width:150px;">Score</th><th style="width:150px;">Tempo Jogado</th></tr></thead>
+                            <tbody id="bmPlayerTableBody"><tr><td colspan="3" style="text-align:center; padding:20px; color:#555;">Nenhum dado carregado.</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-others" class="view-section">
+            <div class="others-container">
+                <div class="col-half">
+                    <h3 style="color:var(--accent);">SERVER TERMINAL (Real-Time)</h3>
+                    <div class="terminal-box" id="backendLog"><div class="log-entry"><span class="log-time">[Init]</span><span class="log-info">Connecting to local console stream...</span></div></div>
+                </div>
+                <div class="col-half">
+                    <h3 style="color:var(--accent);">CONFIG MANAGEMENT</h3>
+                    <div class="backup-card"><div class="backup-status"><span>Status do Backup:</span><span id="backupStatusText" style="color:#888;">Desconhecido</span></div><div style="display:flex; gap:10px;"><button class="btn-large btn-primary" onclick="saveBackup()">SALVAR BACKUP (DISCO)</button><button class="btn-large btn-sec" onclick="loadBackup()">CARREGAR DO DISCO</button></div></div>
+                    <span class="sidebar-label" style="margin-top:20px;">JSON PREVIEW</span><textarea style="height:150px; font-family:monospace; color:#aaa; background:#111; border:1px solid #333;" readonly id="jsonCleanArea"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalImport" class="modal"><div class="modal-box"><h3 style="color:var(--accent);">IMPORTAR CONFIG</h3><textarea id="importText" rows="10" style="background:#000; color:#fff; width:100%; font-family:monospace;"></textarea><br><br><button class="btn-large btn-primary" onclick="processImport()">PROCESSAR</button><button class="btn-large btn-sec" style="margin-top:5px;" onclick="document.getElementById('modalImport').style.display='none'">CANCELAR</button></div></div>
+
+<script>
+        // --- INICIALIZAÇÃO E INTEGRAÇÃO ELECTRON ---
+        const { ipcRenderer } = require('electron');
+        
+        // Listener: Ouve o pedido de fechamento do main.js
+        ipcRenderer.on('app-closing', async () => {
+            await saveBackup(true); // Salva silenciosamente (true)
+            ipcRenderer.send('save-complete'); // Avisa que pode fechar
+        });
+
+        // --- INICIALIZAÇÃO DE PERFIL ---
+        let currentFile = localStorage.getItem('current_server_file');
+        if (!currentFile || currentFile === 'null') {
+            alert("Nenhum servidor selecionado. Voltando para o menu.");
+            window.location.href = '/'; 
+            throw new Error("Parando execução para redirecionar");
+        }
+
+        let config = { rcon: undefined, game: { admins: [], mods: [] } };
+        let modList = [];
+        let globalAutoUpdate = false;
+        let rconConnected = false;
+        let currentModView = 'list'; 
+
+        const API_BASE = "http://localhost:3000"; 
+        const socket = io(API_BASE);
+
+        // --- RENDER MODS LOGIC ---
+        function setModView(mode) {
+            currentModView = mode;
+            document.getElementById('btnViewList').classList.toggle('active', mode === 'list');
+            document.getElementById('btnViewGrid').classList.toggle('active', mode === 'grid');
+            const container = document.getElementById('modListContainer');
+            if (mode === 'grid') container.classList.add('grid-view'); else container.classList.remove('grid-view');
+            renderList();
+        }
+
+        function renderList() { 
+            const list = document.getElementById('modListContainer'); 
+            const term = document.getElementById('modSearch').value.toLowerCase(); 
+            list.innerHTML=''; let totalBytes=0; let visibleCount=0; 
+            if (currentModView === 'grid') list.classList.add('grid-view'); else list.classList.remove('grid-view');
+            modList.forEach((mod,idx)=>{ 
+                if(term && !((mod.name||"").toLowerCase().includes(term) || (mod.modId||"").toLowerCase().includes(term))) return; 
+                visibleCount++; totalBytes+=(mod.sizeBytes||0); 
+                const isAuto=globalAutoUpdate||mod.autoUpdate; 
+                const dVer=isAuto?'<span style="color:#66bb6a; font-size:0.9em;">(AUTO)</span>':`v${mod.version||'0.0.0'}`; 
+                let depHtml=''; 
+                if(mod.dependencies?.length>0){ 
+                    const mDeps=mod.dependencies.filter(d=>!modList.some(m=>m.modId===d.id)); 
+                    if(mDeps.length>0) depHtml=`<div class="dep-alert-box"><div class="dep-info-text">⚠️ Deps ausentes: <span class="dep-names-list">${mDeps.map(d=>d.name).join(', ')}</span></div><button class="btn-install-all" onclick="addAllDeps('${mod.modId}')">Instalar Tudo (${mDeps.length})</button></div>`; 
+                } 
+                const imgSrc = mod.image||'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+                const workshopUrl = `https://reforger.armaplatform.com/workshop/${mod.modId}`;
+                const el=document.createElement('div'); el.className='mod-item'; 
+                el.innerHTML=`
+                    <div class="mod-content-row">
+                        <a href="${workshopUrl}" target="_blank" title="Abrir no Workshop" style="display:block; flex-shrink:0;"><img src="${imgSrc}" class="mod-thumb"></a>
+                        <div class="mod-info"><div style="font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${(mod.name=="Desconhecido"||!mod.name)?`Mod ${mod.modId}`:mod.name} <span style="font-size:0.8em; color:var(--accent);">${mod.status==='loading'?'...':mod.status==='error'?'!':''}</span></div><div style="font-size:0.8em; color:#888;">ID: ${mod.modId} | ${dVer}</div></div>
+                        <div class="mod-actions"><span style="color:var(--accent); font-weight:bold; min-width:80px; text-align:right; margin-right:10px;">${formatBytes(mod.sizeBytes)}</span><button class="${isAuto?'btn-auto active':'btn-auto'}" onclick="toggleModAutoUpdate(${idx})">↻</button><button style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:bold; padding:10px;" onclick="delMod(${idx})">X</button></div>
+                    </div>${depHtml}`; 
+                list.appendChild(el); 
+            }); 
+            const tGB=totalBytes/1024/1024/1024; document.getElementById('storageText').innerText=`${tGB.toFixed(2)} GB / 20 GB`; 
+            const bar=document.getElementById('storageFill'); if(bar){bar.style.width=Math.min((tGB/20)*100,100)+'%'; bar.style.background=tGB>20?'var(--danger)':'var(--accent)';} 
+            document.getElementById('modCount').innerText=term?`${visibleCount} de ${modList.length}`:modList.length; updateJson(); 
+        }
+
+        // --- SOCKET.IO EVENTS ---
+        const term = document.getElementById('backendLog'); const rconConsole = document.getElementById('rconConsole');
+        socket.on('server-log', (data) => { const entry = document.createElement('div'); entry.className = 'log-entry'; const styleClass = data.type === 'error' ? 'log-error' : 'log-info'; entry.innerHTML = `<span class="log-time">[${data.time}]</span><span class="${styleClass}">${data.msg}</span>`; term.appendChild(entry); term.scrollTop = term.scrollHeight; });
+        socket.on('rcon-log', (msg) => { rconConsole.innerHTML += `<div class="console-line res" style="color:#aaa;">[LOG] ${msg}</div>`; rconConsole.scrollTop = rconConsole.scrollHeight; });
+        socket.on('rcon-response', (msg) => { rconConsole.innerHTML += `<div class="console-line res" style="color:var(--success);">${msg}</div>`; rconConsole.scrollTop = rconConsole.scrollHeight; });
+        socket.on('rcon-status', (status) => { const txt = document.getElementById('rconStatusText'); const btn = document.getElementById('btnConnectRcon'); if(status.connected) { rconConnected = true; txt.innerText = "CONNECTED"; txt.style.color = "var(--success)"; btn.innerText = "DESCONECTAR"; btn.style.background = "var(--danger)"; btn.style.color = "#fff"; } else { rconConnected = false; txt.innerText = status.error ? "ERROR" : "DISCONNECTED"; txt.style.color = status.error ? "var(--danger)" : "#555"; btn.innerText = "CONECTAR"; btn.style.background = "#444"; if(status.error) rconConsole.innerHTML += `<div class="console-line res" style="color:var(--danger);">[ERRO] ${status.error}</div>`; } });
+
+        // --- CORE FUNCTIONS ---
+        function formatBytes(bytes) { if (!bytes) return '0 MB'; const k=1024; const i=Math.floor(Math.log(bytes)/Math.log(k)); return parseFloat((bytes/Math.pow(k,i)).toFixed(2))+' '+['Bytes','KB','MB','GB'][i]; }
+        async function fetchMod(id) { try { const res=await fetch(`${API_BASE}/api/mod/${id}`); if(!res.ok)return null; return await res.json(); } catch(e){return null;} }
+        async function updateModData() { for (let mod of modList) { if (mod.status === 'ok') continue; mod.status = 'loading'; renderList(); const data = await fetchMod(mod.modId); if (data) { mod.name=data.name; mod.version=data.version; mod.sizeBytes=data.sizeBytes; mod.image=data.image; mod.dependencies=data.dependencies||[]; mod.status='ok'; } else { mod.status='error'; } renderList(); } }
+        function toggleScenarioManual() { const s=document.getElementById('confScenario'); document.getElementById('scenarioCustom').style.display=(s.value==='custom')?'block':'none'; updateJson(); }
+        function toggleGlobalAutoUpdate() { globalAutoUpdate=document.getElementById('chkGlobalAuto').checked; renderList(); }
+        function toggleModAutoUpdate(idx) { if(globalAutoUpdate)return; modList[idx].autoUpdate=!modList[idx].autoUpdate; renderList(); }
+        
+        function addAllDeps(pId) { const p=modList.find(m=>m.modId===pId); if(!p)return; p.dependencies.forEach(d=>{if(!modList.some(m=>m.modId===d.id))modList.push({modId:d.id,name:'Buscando...',version:'0.0.0',sizeBytes:0,status:'pending',autoUpdate:false});}); updateModData(); }
+        function addAdmin(){const v=document.getElementById('newAdmin').value.trim(); if(v&&!config.game.admins.includes(v)){config.game.admins.push(v);document.getElementById('newAdmin').value='';renderAdmins();updateJson();}}
+        function renderAdmins(){const c=document.getElementById('adminList');c.innerHTML='';if(config.game.admins.length===0){c.innerHTML='<div style="padding:10px; color:#555; text-align:center; font-size:0.9em;">Nenhum Admin</div>';return;}config.game.admins.forEach((a,i)=>{const d=document.createElement('div');d.className='admin-item';d.innerHTML=`<span>${a}</span><span class="btn-remove" onclick="removeAdmin(${i})">X</span>`;c.appendChild(d);});}
+        function removeAdmin(i){config.game.admins.splice(i,1);renderAdmins();updateJson();}
+        function togglePass(){const chk=document.getElementById('chkPass');document.getElementById('confPass').style.display=chk.checked?'block':'none';updateJson();}
+        function addMod(){const v=document.getElementById('quickMod').value;const m=v.match(/([A-Fa-f0-9]{16})/);if(m){modList.push({modId:m[1],name:'...',version:'0.0.0',sizeBytes:0,status:'pending',autoUpdate:false});document.getElementById('quickMod').value='';updateModData();}else{alert("ID Inválido");}}
+        function delMod(i){modList.splice(i,1);renderList();}
+        function clearMods(){modList=[];renderList();}
+        function fixVersion(v) { if(!v)return "0.0.0"; let c=v.replace(/[^0-9.]/g,''); let p=c.split('.'); while(p.length<3)p.push("0"); return p.slice(0,3).join('.'); }
+        function updateJson(){ if(config.rcon){ config.rcon.address=document.getElementById('rconBindIp').value; config.rcon.port=parseInt(document.getElementById('rconPort').value)||19999; config.rcon.password=document.getElementById('rconPass').value; config.rcon.permission=document.getElementById('rconPerm').value; } const sId=(document.getElementById('confScenario').value==='custom')?document.getElementById('scenarioCustom').value:document.getElementById('confScenario').value; const final={ bindAddress: document.getElementById('confBindIp').value, bindPort: 25673, publicAddress: document.getElementById('confPublicIp').value, publicPort: 25673, ...(config.rcon?{rcon:config.rcon}:{}), game:{ name: document.getElementById('confNamePrefix').value + document.getElementById('confNameSuffix').value, password:document.getElementById('chkPass').checked?document.getElementById('confPass').value:"", passwordAdmin:document.getElementById('confAdminPass').value, maxPlayers:parseInt(document.getElementById('confPlayers').value), scenarioId:sId, visible:document.getElementById('chkVis').checked, gameProperties:{ disableThirdPerson:document.getElementById('chk3rd').checked, battlEye:document.getElementById('chkBE').checked, fastValidation:true, networkViewDistance:1000, serverMaxViewDistance:2200 }, admins:config.game.admins, mods:modList.map(m=>({modId:m.modId,name:m.name,version:(globalAutoUpdate||m.autoUpdate)?"":fixVersion(m.version)})) } }; let jStr=JSON.stringify(final,null,4); jStr=jStr.replace(/"mods": \[\s+([\s\S]*?)\s+\]/g,(m,c)=>{ if(!c.trim())return `"mods": []`; const i=c.split('},').map(it=>{ let cl=it.trim(); if(!cl)return null; if(!cl.endsWith('}'))cl+='}'; cl=cl.replace(/\s+/g,' '); return '            '+cl; }).filter(x=>x); return `"mods": [\n${i.join(',\n')}\n        ]`; }); document.getElementById('hiddenJson').value=jStr; updateJsonTools(); }
+        function updateJsonTools() { const raw = document.getElementById('hiddenJson').value; try { document.getElementById('jsonCleanArea').value = JSON.stringify(JSON.parse(raw)); } catch(e) { } }
+        function processImport(){ try { const j=JSON.parse(document.getElementById('importText').value); if(j.game){ const name = j.game.name || ""; const parts = name.split(" | "); if (parts.length > 1) { document.getElementById('confNamePrefix').value = parts[0] + " | "; document.getElementById('confNameSuffix').value = parts.slice(1).join(" | "); } else { document.getElementById('confNamePrefix').value = ""; document.getElementById('confNameSuffix').value = name; } document.getElementById('confAdminPass').value=j.game.passwordAdmin||""; document.getElementById('chkPass').checked=!!j.game.password; document.getElementById('confPass').value=j.game.password||""; document.getElementById('confBindIp').value = j.bindAddress || "0.0.0.0"; document.getElementById('confPublicIp').value = j.publicAddress || ""; togglePass(); config.game.admins=j.game.admins||[]; modList=(j.game.mods||[]).map(m=>({modId:m.modId,name:m.name,version:m.version,sizeBytes:0,status:'pending',autoUpdate:(m.version==="")})); if(j.rcon) { config.rcon = j.rcon; } else { config.rcon = undefined; } renderRconState(); renderAdmins(); document.getElementById('modalImport').style.display='none'; updateModData(); } } catch(e){alert("JSON Inválido");} }
+        function toggleNav() { document.getElementById('mainNav').classList.toggle('expanded'); }
+        function switchView(viewName, element) { document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active')); element.classList.add('active'); document.getElementById('view-' + viewName).classList.add('active'); if(viewName === 'others') updateJsonTools(); }
+        function renderRconState() { const installUI = document.getElementById('rconInstallUI'); const configUI = document.getElementById('rconConfigUI'); if (config.rcon) { installUI.style.display = 'none'; configUI.style.display = 'flex'; document.getElementById('rconBindIp').value = config.rcon.address; document.getElementById('rconPort').value = config.rcon.port; document.getElementById('rconPass').value = config.rcon.password; document.getElementById('rconPerm').value = config.rcon.permission; } else { installUI.style.display = 'flex'; configUI.style.display = 'none'; } }
+        function installRcon() { const adminPass = document.getElementById('confAdminPass').value; config.rcon = { address: "0.0.0.0", port: 19999, password: adminPass || "MudarSenha123", permission: "admin" }; renderRconState(); updateJson(); }
+        function removeRcon() { if(confirm("Remover RCON?")) { config.rcon = undefined; renderRconState(); updateJson(); } }
+        function realConnectRcon() { if(rconConnected) { socket.emit('rcon-disconnect'); } else { const ip = document.getElementById('rconConnectIp').value; const port = document.getElementById('rconPort').value; const pass = document.getElementById('rconPass').value; if(!ip || !port || !pass) { alert("Preencha IP, Porta e Senha do RCON."); return; } rconConsole.innerHTML += `<div class="console-line res">Iniciando conexão com ${ip}:${port}...</div>`; socket.emit('rcon-connect', { host: ip, port: port, password: pass }); } }
+        function sendRconCommand() { if(!rconConnected) { alert("Conecte-se ao RCON primeiro."); return; } const input = document.getElementById('rconCommandInput'); const cmd = input.value.trim(); if(!cmd) return; rconConsole.innerHTML += `<div class="console-line cmd">> ${cmd}</div>`; socket.emit('rcon-send', cmd); input.value = ''; }
+        function handleRconEnter(e){if(e.key==='Enter')sendRconCommand();}
+
+        async function loadBattlemetrics() { 
+            const idField = document.getElementById('bmServerId');
+            const id = idField.value.trim(); 
+            if(!id) { resetBattlemetricsUI(); return; } 
+            document.getElementById('bmServerName').innerText = "Carregando...";
+            document.getElementById('bmStatusDot').className = 'bm-status-indicator';
+            document.getElementById('bmStatusDot').style.backgroundColor = '#555'; 
+
+            try { 
+                const res = await fetch(`${API_BASE}/api/battlemetrics/${id}`); 
+                const json = await res.json(); 
+                if (!res.ok || json.error) throw new Error(json.error || "Servidor não encontrado");
+                
+                if (json.data) { 
+                    const attr = json.data.attributes; 
+                    const det = attr.details || {}; 
+                    document.getElementById('bmServerName').innerText = attr.name || "Sem Nome"; 
+                    document.getElementById('bmIp').innerText = `${attr.ip}:${attr.port}`; 
+                    setBmText('infoRank', attr.rank ? `#${attr.rank}` : "Sem Rank");
+                    setBmText('infoPlayers', `${attr.players || 0}/${attr.maxPlayers || 0}`);
+                    setBmText('infoAddress', `${attr.ip}:${attr.port}`);
+                    const status = attr.status || "offline";
+                    const statusEl = document.getElementById('infoStatus');
+                    statusEl.innerText = status.toUpperCase();
+                    statusEl.style.color = status === 'online' ? "var(--success)" : "var(--danger)";
+                    setBmText('infoCountry', attr.country || "UNK");
+                    let map = det.map; 
+                    if(!map && det.scenarioId) { const m = det.scenarioId.match(/([^\/]+)\.conf/); if(m) map = m[1].replace(/_/g,' ').replace(/Campaign/i, '').trim(); }
+                    setBmText('infoScenario', map || det.mission || det.scenarioId || "Desconhecido");
+                    setBmBool('infoPass', det.password);
+                    setBmBool('infoBE', det.battlEye || det.anticheat);
+                    setBmBool('infoOfficial', det.official);
+                    document.getElementById('bmStatusDot').className = status === 'online' ? 'bm-status-indicator status-online' : 'bm-status-indicator status-offline'; 
+                    document.getElementById('bmStatusDot').style.backgroundColor = ''; 
+                    updateCharts(attr.rank || 5000, attr.players || 0);
+                    renderPlayersTable(json.included);
+                } 
+            } catch(e) { 
+                console.error(e); 
+                document.getElementById('bmServerName').innerText = "Erro ao carregar";
+                document.getElementById('bmStatusDot').className = 'bm-status-indicator status-offline';
+                alert(`Erro Battlemetrics: ${e.message}`); 
+            } 
+        }
+
+        function resetBattlemetricsUI() {
+            document.getElementById('bmServerName').innerText = "Aguardando ID...";
+            document.getElementById('bmIp').innerText = "-";
+            document.getElementById('bmStatusDot').className = 'bm-status-indicator status-offline';
+            ['infoRank', 'infoPlayers', 'infoAddress', 'infoStatus', 'infoCountry', 'infoScenario', 'infoPass', 'infoBE', 'infoOfficial'].forEach(id => document.getElementById(id).innerText = "-");
+            document.getElementById('bmPlayerTableBody').innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;">Insira um ID para carregar.</td></tr>';
+        }
+        function setBmText(id, text) { document.getElementById(id).innerText = text || "-"; }
+        function setBmBool(id, value) { const el = document.getElementById(id); el.innerText = value ? "Sim" : "Não"; el.style.color = value ? "var(--success)" : "#888"; if(id === 'infoPass') el.style.color = value ? "var(--danger)" : "#888"; }
+        function renderPlayersTable(included) {
+            const tbody = document.getElementById('bmPlayerTableBody'); tbody.innerHTML=""; 
+            if(included){ 
+                const pList = included.filter(x => x.type === 'player'); 
+                if(pList.length > 0) {
+                    pList.forEach(p => { 
+                        const seconds = p.meta?.timePlayed || 0;
+                        let timeStr = seconds < 3600 ? Math.floor(seconds/60) + "m" : (seconds/3600).toFixed(1) + "h";
+                        tbody.innerHTML += `<tr><td style="color:#fff;">${p.attributes.name || "Unknown"}</td><td>${p.attributes.score || 0}</td><td style="color:#888;">${timeStr}</td></tr>`; 
+                    }); 
+                } else { tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px;">Servidor vazio ou dados ocultos.</td></tr>'; }
+            } else { tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px;">Sem dados de jogadores.</td></tr>'; }
+        }
+        function updateCharts(currentRank, currentPlayers) {
+            let labels = ['1', '2', '3', '4', '5', '6', '7'];
+            let rankData = []; let playerData = [];
+            for(let i=0; i<6; i++) {
+                rankData.push(Math.max(1, currentRank + Math.floor(Math.random() * 200) - 100));
+                playerData.push(Math.max(0, currentPlayers + Math.floor(Math.random() * 6) - 3));
+            }
+            rankData.push(currentRank); playerData.push(currentPlayers);
+            new Chartist.Line('#chartRank', { labels: labels, series: [rankData] }, { fullWidth: true, chartPadding: { right: 40 }, showArea: true, axisY: { onlyInteger: true, offset: 50, showGrid: false } });
+            new Chartist.Line('#chartPlayers', { labels: labels, series: [playerData] }, { fullWidth: true, chartPadding: { right: 40 }, showArea: true, low: 0, axisY: { onlyInteger: true, offset: 30, showGrid: false } });
+        }
+
+        async function loadBackup() { 
+            try { 
+                const res = await fetch(`${API_BASE}/api/profiles/${currentFile}`); 
+                const json = await res.json(); 
+                
+                if(json && json.armaConfig) { 
+                    const game = json.armaConfig.game;
+                    const rcon = json.armaConfig.rcon;
+                    const meta = json.meta || {};
+
+                    // --- BATTLEMETRICS ---
+                    if(meta.bmId) {
+                        document.getElementById('bmServerId').value = meta.bmId;
+                        loadBattlemetrics(); 
+                    }
+
+                    // --- CAMPOS DO JOGO ---
+                    const np = (game.name||"").split("| "); 
+                    document.getElementById('confNameSuffix').value = np.length>1 ? np[1] : game.name; 
+                    document.getElementById('confAdminPass').value = game.passwordAdmin || ""; 
+                    document.getElementById('chkPass').checked = !!game.password; 
+                    document.getElementById('confPass').value = game.password || ""; 
+                    togglePass();
+                    
+                    document.getElementById('confBindIp').value = json.armaConfig.bindAddress || "0.0.0.0"; 
+                    document.getElementById('confPublicIp').value = json.armaConfig.publicAddress || ""; 
+                    
+                    config.game.admins = game.admins || []; 
+                    renderAdmins();
+
+                    // --- MODS ---
+                    modList = (game.mods||[]).map(m=>({
+                        modId: m.modId,
+                        name: m.name,
+                        version: m.version,
+                        sizeBytes: 0,
+                        status: 'pending',
+                        autoUpdate: (m.version==="")
+                    }));
+                    updateModData();
+
+                    // --- RCON CONFIG ---
+                    if(rcon) config.rcon = rcon; else config.rcon = undefined; 
+                    renderRconState();
+                    
+                    // --- CORREÇÃO DO IP DE CONEXÃO DO PAINEL ---
+                    // Se tiver um IP salvo no Meta, usa ele.
+                    // Se não, tenta o IP público.
+                    // Em último caso, usa localhost.
+                    let rconIpToUse = "127.0.0.1";
+                    if (meta.rconHost) {
+                        rconIpToUse = meta.rconHost;
+                    } else if (json.armaConfig.publicAddress) {
+                        rconIpToUse = json.armaConfig.publicAddress;
+                    }
+                    document.getElementById('rconConnectIp').value = rconIpToUse;
+
+                    // Popula o JSON hidden para edições futuras
+                    document.getElementById('hiddenJson').value = JSON.stringify(json.armaConfig, null, 4);
+                    updateJsonTools();
+
+                    document.getElementById('backupStatusText').innerText = "Perfil Carregado: " + (meta.name || currentFile);
+                    document.getElementById('backupStatusText').style.color = "var(--accent)";
+                } 
+            } catch(e) { 
+                alert("Erro ao ler perfil: " + e.message); 
+                window.location.href = '/';
+            } 
+        }
+
+        async function saveBackup(silent = false) { 
+            updateJson(); 
+            const currentArmaConfig = JSON.parse(document.getElementById('hiddenJson').value);
+            const currentBmId = document.getElementById('bmServerId').value;
+            const currentRconHost = document.getElementById('rconConnectIp').value; // Pega o IP da caixa de texto
+            
+            const finalSave = {
+                meta: {
+                    name: currentArmaConfig.game.name,
+                    bmId: currentBmId,
+                    rconHost: currentRconHost // Salva o IP do RCON para a próxima vez
+                },
+                armaConfig: currentArmaConfig
+            };
+
+            try { 
+                const res = await fetch(`${API_BASE}/api/profiles/${currentFile}`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(finalSave) 
+                }); 
+                const j = await res.json(); 
+                if(j.success) { 
+                    document.getElementById('backupStatusText').innerText = "Salvo: " + new Date().toLocaleTimeString(); 
+                    document.getElementById('backupStatusText').style.color = "var(--success)"; 
+                    if(!silent) alert("Perfil salvo com sucesso!"); 
+                } 
+            } catch(e) { 
+                if(!silent) alert("Erro ao salvar: " + e.message); 
+            } 
+        }
+
+        // Novas Funções Nativas (Electron)
+        async function downloadTxt() {
+            const { ipcRenderer } = require('electron');
+            updateJson();
+            const content = document.getElementById('hiddenJson').value;
+            const serverName = document.getElementById('confNameSuffix').value || "server";
+            const filename = `config_${serverName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+            const result = await ipcRenderer.invoke('save-txt-dialog', { filename: filename, content: content });
+            if (result.success) alert("Arquivo salvo com sucesso!"); else if (result.error) alert("Erro ao salvar: " + result.error);
+        }
+
+        function copyJson() {
+            const { clipboard } = require('electron');
+            updateJson();
+            const content = document.getElementById('hiddenJson').value;
+            clipboard.writeText(content);
+            const btn = document.querySelector('button[onclick="copyJson()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "COPIADO!";
+            btn.style.background = "var(--success)";
+            btn.style.color = "#fff";
+            setTimeout(() => { btn.innerText = originalText; btn.style.background = "#444"; btn.style.color = "#fff"; }, 2000);
+        }
+        
+        renderAdmins(); 
+        renderRconState();
+        loadBackup();
+    </script>
+</body>
+</html>

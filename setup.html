@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Server Manager Setup</title>
+    <style>
+        body { background: #121212; color: #eee; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { width: 500px; background: #1e1e1e; padding: 30px; border-radius: 8px; border: 1px solid #333; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        h1 { color: #d4e157; margin-top: 0; text-align: center; }
+        .step { display: none; }
+        .step.active { display: block; }
+        .btn { width: 100%; padding: 12px; margin-top: 10px; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.2s; }
+        .btn-primary { background: #d4e157; color: #000; }
+        .btn-primary:hover { background: #c0ca33; }
+        .btn-sec { background: #333; color: #fff; }
+        .btn-sec:hover { background: #444; }
+        input, textarea, select { width: 100%; padding: 10px; margin: 5px 0 15px 0; background: #000; border: 1px solid #444; color: #fff; box-sizing: border-box; border-radius: 4px; }
+        .save-item { background: #2a2a2a; padding: 15px; margin-bottom: 10px; cursor: pointer; border: 1px solid #333; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .save-item:hover { border-color: #d4e157; }
+        .label { font-size: 0.85em; color: #888; margin-bottom: 2px; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div id="step-list" class="step active">
+        <h1>Selecione o Servidor</h1>
+        <div id="profileList" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+            <div style="text-align:center; color:#555;">Buscando perfis...</div>
+        </div>
+        <button class="btn btn-primary" onclick="goToStep('method')">+ CRIAR NOVO SERVIDOR</button>
+    </div>
+
+    <div id="step-method" class="step">
+        <h1>Configuração Inicial</h1>
+        <p style="text-align:center; color:#aaa;">Você já possui um arquivo JSON de configuração?</p>
+        <button class="btn btn-primary" onclick="goToStep('import')">SIM, TENHO O CONFIG.JSON</button>
+        <button class="btn btn-sec" onclick="goToStep('wizard')">NÃO, CRIAR DO ZERO</button>
+        <button class="btn btn-sec" style="margin-top:20px; border:1px solid #333; background:transparent;" onclick="goToStep('list')">Voltar</button>
+    </div>
+
+    <div id="step-import" class="step">
+        <h1>Importar Config</h1>
+        <span class="label">Cole o conteúdo do seu arquivo config.json abaixo:</span>
+        <textarea id="importJson" rows="10" placeholder="{ ... }"></textarea>
+        <button class="btn btn-primary" onclick="processImport()">PRÓXIMO</button>
+        <button class="btn btn-sec" onclick="goToStep('method')">Voltar</button>
+    </div>
+
+    <div id="step-wizard" class="step">
+        <h1>Criar Servidor</h1>
+        <span class="label">Nome do Servidor (Que aparece na lista)</span>
+        <input type="text" id="wizName" placeholder="Ex: [BR] Meu Server">
+        
+        <span class="label">Senha de Admin (RCON/Login)</span>
+        <input type="text" id="wizAdminPass" value="admin123">
+
+        <span class="label">Máximo de Players</span>
+        <input type="number" id="wizPlayers" value="64">
+
+        <button class="btn btn-primary" onclick="processWizard()">PRÓXIMO</button>
+        <button class="btn btn-sec" onclick="goToStep('method')">Voltar</button>
+    </div>
+
+    <div id="step-bm" class="step">
+        <h1>Battlemetrics</h1>
+        <p style="text-align:center; color:#aaa;">Seu servidor já está online no Battlemetrics?</p>
+        <span class="label">ID do Servidor (Opcional - deixe em branco se não tiver)</span>
+        <input type="text" id="wizBmId" placeholder="Ex: 12345678">
+        
+        <button class="btn btn-primary" onclick="finishSetup()">FINALIZAR</button>
+    </div>
+
+</div>
+
+<script>
+    let finalConfig = {}; // Objeto que será salvo
+
+    // 1. Carrega lista ao abrir
+    window.onload = loadProfiles;
+
+    async function loadProfiles() {
+        const res = await fetch('/api/profiles');
+        const profiles = await res.json();
+        const list = document.getElementById('profileList');
+        list.innerHTML = '';
+
+        if (profiles.length === 0) {
+            goToStep('method'); // Se não tem saves, vai direto pro setup
+            return;
+        }
+
+        profiles.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'save-item';
+            div.innerHTML = `<span>${p.name}</span> <small style="color:#666">${p.filename}</small>`;
+            div.onclick = () => loadServer(p.filename);
+            list.appendChild(div);
+        });
+    }
+
+    function goToStep(id) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('step-' + id).classList.add('active');
+    }
+
+    function processImport() {
+        try {
+            const txt = document.getElementById('importJson').value;
+            const json = JSON.parse(txt);
+            // Prepara a estrutura final com 'meta' e 'armaConfig'
+            finalConfig = {
+                meta: { name: (json.game && json.game.name) ? json.game.name : "Servidor Importado", bmId: "" },
+                armaConfig: json
+            };
+            goToStep('bm');
+        } catch(e) {
+            alert("JSON Inválido! Verifique a formatação.");
+        }
+    }
+
+    function processWizard() {
+        const name = document.getElementById('wizName').value || "Meu Servidor";
+        const adminPass = document.getElementById('wizAdminPass').value || "admin";
+        const players = parseInt(document.getElementById('wizPlayers').value) || 64;
+
+        // ESTRUTURA PADRÃO PEDIDA
+        const baseConfig = {
+            "bindAddress": "0.0.0.0",
+            "bindPort": 2001,
+            "publicAddress": "",
+            "publicPort": 2001,
+            "game": {
+                "name": name,
+                "password": "",
+                "passwordAdmin": adminPass,
+                "maxPlayers": players,
+                "scenarioId": "{9002E94F303DD941}Missions/23_Campaign_North.conf",
+                "visible": true,
+                "admins": [],
+                "mods": [],
+                "gameProperties": {
+                    "battlEye": true,
+                    "disableThirdPerson": false,
+                    "fastValidation": true,
+                    "networkViewDistance": 1000,
+                    "serverMaxViewDistance": 2500
+                }
+            },
+            "rcon": {
+                "address": "127.0.0.1",
+                "port": 19999,
+                "password": adminPass,
+                "permission": "admin"
+            }
+        };
+
+        finalConfig = {
+            meta: { name: name, bmId: "" },
+            armaConfig: baseConfig
+        };
+        goToStep('bm');
+    }
+
+    async function finishSetup() {
+        const bmId = document.getElementById('wizBmId').value.trim();
+        if (bmId) finalConfig.meta.bmId = bmId;
+
+        // Gera um nome de arquivo unico
+        const filename = 'server_' + Date.now() + '.json';
+
+        // Salva no backend
+        await fetch('/api/profiles/' + filename, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(finalConfig)
+        });
+
+        // Carrega
+        loadServer(filename);
+    }
+
+    function loadServer(filename) {
+        // Salva no localStorage qual server estamos usando para o index.html saber
+        localStorage.setItem('current_server_file', filename);
+        // Redireciona para o painel principal
+        window.location.href = '/panel';
+    }
+
+</script>
+</body>
+</html>

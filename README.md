@@ -8,9 +8,10 @@ Um gerenciador de servidor para Arma Reforger construído com Electron, Express 
 
 ### Visão geral
 
-Este projeto inicia um backend local em `server.js` e carrega a interface dentro de uma janela Electron.
-A interface principal é servida em `http://localhost:3000` e o servidor de configuração inicial usa `setup.html` quando disponível.
-Os perfis de servidor são salvos na pasta `saves/` ou, quando empacotado, no diretório de dados do usuário do Windows.
+É um aplicativo Electron sem servidor local: a interface (`setup.html` e `index.html`) fala com o processo principal (`main.js`) só por IPC, através do `preload.js`, e não abre nenhuma porta de rede.
+A lógica fica em `backend/`: perfis (`profiles.js`), configurações (`settings.js`), dados da Workshop (`workshop.js`), consulta direta ao servidor (`a2s.js`), BattleMetrics (`battlemetrics.js`) e RCON (`rcon.js` + `be-rcon.js`).
+A tela inicial (`setup.html`) lista os perfis; o painel (`index.html`) edita o perfil escolhido.
+Os perfis de servidor são salvos no diretório de dados do usuário do Windows (veja "Onde os arquivos são salvos").
 
 <img width="1439" height="849" alt="image" src="https://github.com/user-attachments/assets/c4cb9f8f-2f98-427d-ade4-ebdce7f7fd07" />
 
@@ -21,11 +22,11 @@ Os perfis de servidor são salvos na pasta `saves/` ou, quando empacotado, no di
 
 <img width="658" height="327" alt="image" src="https://github.com/user-attachments/assets/d564b59d-0444-4cfb-b3f4-be7a782195cc" />
 
-- Conexão via RCON usando `rcon-client`
+- Conexão via RCON (protocolo BattlEye RCon sobre UDP, o mesmo do servidor Arma Reforger)
 
 <img width="1177" height="768" alt="image" src="https://github.com/user-attachments/assets/09f5682c-302e-4486-b57e-bb050307abcb" />
 
-- Consulta de dados do BattleMetrics
+- Monitor do servidor sem depender de terceiros: status, jogadores, cenário, versão e ping consultados direto no servidor pelo protocolo A2S (Steam Query, porta do bloco `a2s` do config, padrão 17777/UDP). Os nomes dos jogadores vêm do RCON (`#players`), porque o A2S do Reforger não os informa. Rank e país continuam disponíveis pelo BattleMetrics, que exige um token de API (assinatura).
 
 <img width="1348" height="817" alt="image" src="https://github.com/user-attachments/assets/acfb714d-88c3-4a89-a87d-6d0f3944455c" />
 
@@ -47,9 +48,11 @@ Os dados capturados incluem nomes, descrições, IDs e outras metadatas dos mods
 
 Infelizmente, a ausência de uma API dedicada torna o processo mais frágil, já que mudanças no layout do site podem quebrar a funcionalidade. Esperamos que a Bohemia Interactive considere implementar uma API oficial em futuras atualizações.
 
+Para reduzir essa fragilidade, o app lê os dados estruturados que a própria página publica (`<script id="__NEXT_DATA__">`) em vez de procurar texto no HTML, consulta no máximo 4 mods ao mesmo tempo e guarda os resultados em cache (`mod-cache.json`) por 6 horas.
+
 ### Requisitos
 
-- Node.js instalado
+- Node.js 22.12 ou superior (exigido pelo Electron 44)
 - npm instalado
 - Windows (recomendado para empacotamento com Electron)
 
@@ -76,7 +79,7 @@ Ou use o atalho automático:
 start.bat
 ```
 
-O `start.bat` verifica se `node_modules` existe, instala as dependências quando necessário e inicia o aplicativo Electron.
+O `start.bat` verifica se `node_modules` existe, instala as dependências quando necessário, baixa o Electron na primeira vez (com o progresso visível) e inicia o aplicativo.
 
 Isso iniciará o Electron que, por sua vez, carrega o backend local e abre a interface em uma janela.
 
@@ -92,10 +95,18 @@ O pacote será criado na pasta `dist/`.
 
 > Observação: o Windows Defender/SmartScreen pode bloquear o instalador em builds não assinados. Rode como administrador ou adicione exceção se necessário.
 
+### Testes
+
+```powershell
+npm test
+```
+
 ### Onde os arquivos são salvos
 
-- Em desenvolvimento: `saves/`
-- Em build empacotado: `app.getPath('userData')/saves`
+- Rodando pelo Electron (`npm start`): `%APPDATA%\compilador\saves`
+- Build empacotado: `%APPDATA%\Arma Reforger Manager\saves`
+
+Na mesma pasta-mãe ficam `settings.json` (token do BattleMetrics) e `mod-cache.json` (cache da Workshop).
 
 ### Problemas comuns
 
@@ -108,6 +119,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 - Se o RCON não conectar:
   - Verifique host, porta e senha.
   - Confirme que o servidor Arma Reforger está com RCON habilitado.
+  - A porta do RCON é UDP: libere-a no firewall do servidor.
 
 ---
 
@@ -115,9 +127,10 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### Overview
 
-This project starts a local backend in `server.js` and loads the UI inside an Electron window.
-The main interface is served at `http://localhost:3000`, and the initial setup page uses `setup.html` when present.
-Server profiles are saved in the `saves/` folder, or in the user's data directory when packaged.
+It is an Electron app with no local server: the UI (`setup.html` and `index.html`) talks to the main process (`main.js`) only over IPC, through `preload.js`, and no network port is opened.
+The logic lives in `backend/`: profiles (`profiles.js`), settings (`settings.js`), Workshop data (`workshop.js`), direct server query (`a2s.js`), BattleMetrics (`battlemetrics.js`) and RCON (`rcon.js` + `be-rcon.js`).
+The start screen (`setup.html`) lists the profiles; the panel (`index.html`) edits the selected one.
+Server profiles are saved in the user's Windows data directory (see "Where files are saved").
 
 ### Features
 
@@ -125,11 +138,11 @@ Server profiles are saved in the `saves/` folder, or in the user's data director
 
 <img width="656" height="333" alt="image" src="https://github.com/user-attachments/assets/cf57c729-68d8-4d30-9849-d220fa27e33e" />
 
-- RCON connection using `rcon-client`
+- RCON connection (BattlEye RCon protocol over UDP, the same one the Arma Reforger server uses)
 
 <img width="1177" height="768" alt="image" src="https://github.com/user-attachments/assets/09f5682c-302e-4486-b57e-bb050307abcb" />
 
-- BattleMetrics data fetch
+- Server monitor with no third party: status, players, scenario, version and ping queried straight from the server over A2S (Steam Query, the port of the config's `a2s` block, 17777/UDP by default). Player names come from RCON (`#players`), because Reforger's A2S does not report them. Rank and country are still available from BattleMetrics, which requires an API token (subscription).
 
 <img width="1348" height="817" alt="image" src="https://github.com/user-attachments/assets/acfb714d-88c3-4a89-a87d-6d0f3944455c" />
 
@@ -152,9 +165,11 @@ The captured data includes mod names, descriptions, IDs, and other metadata from
 
 Unfortunately, the lack of a dedicated API makes the process more fragile, as changes to the website's layout can break functionality. We hope Bohemia Interactive will consider implementing an official API in future updates.
 
+To reduce that fragility, the app reads the structured data the page itself publishes (`<script id="__NEXT_DATA__">`) instead of searching the HTML text, queries at most 4 mods at a time and caches the results (`mod-cache.json`) for 6 hours.
+
 ### Requirements
 
-- Node.js installed
+- Node.js 22.12 or newer (required by Electron 44)
 - npm installed
 - Windows recommended for Electron packaging
 
@@ -181,7 +196,7 @@ Or use the automatic launcher:
 start.bat
 ```
 
-The `start.bat` checks for `node_modules`, installs dependencies if needed, and starts the Electron app.
+The `start.bat` checks for `node_modules`, installs dependencies if needed, downloads Electron on the first run (with visible progress) and starts the app.
 
 This will launch Electron, which starts the backend and opens the UI in a window.
 
@@ -197,10 +212,18 @@ The package will be created under `dist/`.
 
 > Note: Windows Defender / SmartScreen may block unsigned installer builds. Run as administrator or add an exception if necessary.
 
+### Tests
+
+```powershell
+npm test
+```
+
 ### Where files are saved
 
-- During development: `saves/`
-- Packaged app: `app.getPath('userData')/saves`
+- Running through Electron (`npm start`): `%APPDATA%\compilador\saves`
+- Packaged app: `%APPDATA%\Arma Reforger Manager\saves`
+
+The same parent folder holds `settings.json` (BattleMetrics token) and `mod-cache.json` (Workshop cache).
 
 ### Common issues
 
@@ -213,3 +236,4 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 - If RCON fails to connect:
   - Check host, port and password.
   - Verify that the Arma Reforger server has RCON enabled.
+  - The RCON port is UDP: open it in the server's firewall.

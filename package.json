@@ -1,28 +1,21 @@
 {
   "name": "compilador",
   "version": "1.0.0",
-  "description": "",
+  "description": "Arma Reforger Server Mod Manager - gerenciador de perfis, mods, RCON e monitoramento para servidores de Arma Reforger",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test test/*.test.js",
     "start": "electron .",
     "build": "electron-builder",
     "dist": "electron-builder --publish=never"
   },
   "keywords": [],
-  "author": "",
+  "author": "Kiichiuwu",
   "license": "ISC",
   "type": "commonjs",
-  "dependencies": {
-    "axios": "^1.13.3",
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "rcon-client": "^4.2.5",
-    "socket.io": "^4.8.3"
-  },
   "devDependencies": {
-    "electron": "^28.3.3",
-    "electron-builder": "^24.13.3"
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
   },
   "build": {
     "appId": "com.armareforgermanager.app",
@@ -31,11 +24,11 @@
       "output": "dist"
     },
     "files": [
-      "**/*",
-      "!dist/**/*",
-      "!build/**/*",
-      "!*.md",
-      "!package-lock.json"
+      "main.js",
+      "preload.js",
+      "backend/**/*.js",
+      "index.html",
+      "setup.html"
     ],
     "win": {
       "target": "nsis"

@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
     <title>Server Manager Setup</title>
     <style>
         body { background: #121212; color: #eee; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
@@ -18,7 +19,7 @@
         .save-item { background: #2a2a2a; padding: 15px; margin-bottom: 10px; cursor: pointer; border: 1px solid #333; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
         .save-item:hover { border-color: #d4e157; }
         .label { font-size: 0.85em; color: #888; margin-bottom: 2px; display: block; }
-        .container { position: relative; }
+        .container { position: relative; padding-bottom: 70px; }
         .lang-switcher { position: absolute; right: 20px; bottom: 20px; display: flex; gap: 8px; }
         .lang-switcher button { padding: 8px 12px; border: 1px solid #333; border-radius: 4px; background: #111; color: #eee; cursor: pointer; transition: 0.2s; }
         .lang-switcher button.active, .lang-switcher button:hover { border-color: #d4e157; color: #d4e157; }
@@ -58,10 +59,10 @@
         <input type="text" id="wizName" data-i18n-placeholder="serverNamePlaceholder" placeholder="Ex: [BR] Meu Server">
         
         <span class="label" data-i18n="adminPassLabel">Senha de Admin (RCON/Login)</span>
-        <input type="text" id="wizAdminPass" value="admin123">
+        <input type="text" id="wizAdminPass" value="">
 
         <span class="label" data-i18n="maxPlayersLabel">Máximo de Players</span>
-        <input type="number" id="wizPlayers" value="64">
+        <input type="number" id="wizPlayers" value="64" min="1" max="128">
 
         <button class="btn btn-primary" onclick="processWizard()" data-i18n="importNext">PRÓXIMO</button>
         <button class="btn btn-sec" onclick="goToStep('method')" data-i18n="backButton">Voltar</button>
@@ -110,9 +111,19 @@
             bmIdPlaceholder: "Ex: 12345678",
             finishButton: "FINALIZAR",
             invalidJson: "JSON inválido! Verifique a formatação.",
+            invalidConfig: "Esse JSON não parece um config.json do Arma Reforger (falta o bloco \"game\").",
             deleteConfirm: "Excluir este perfil? Esta ação não pode ser desfeita.",
             deleteButton: "Excluir",
-            profileDeleteFail: "Falha ao excluir: "
+            profileDeleteFail: "Falha ao excluir: ",
+            profileLoadFail: "Não foi possível carregar a lista de perfis: ",
+            profileSaveFail: "Falha ao salvar o perfil: ",
+            corruptProfile: "(arquivo corrompido)",
+            corruptProfileAlert: "Este perfil está corrompido e não pode ser aberto. Você pode excluí-lo.",
+            invalidNameProfile: "(nome de arquivo inválido)",
+            repairNameButton: "Corrigir nome",
+            repairNameFail: "Falha ao renomear: ",
+            invalidNameAlert: "O nome deste arquivo tem caracteres não permitidos. Use \"Corrigir nome\" para renomeá-lo.",
+            notInApp: "Abra esta tela pelo aplicativo Arma Reforger Manager."
         },
         "en-US": {
             selectServer: "Select Server",
@@ -138,9 +149,19 @@
             bmIdPlaceholder: "Ex: 12345678",
             finishButton: "FINISH",
             invalidJson: "Invalid JSON! Check formatting.",
+            invalidConfig: "This JSON does not look like an Arma Reforger config.json (missing the \"game\" block).",
             deleteConfirm: "Delete this profile? This action cannot be undone.",
             deleteButton: "Delete",
-            profileDeleteFail: "Failed to delete: "
+            profileDeleteFail: "Failed to delete: ",
+            profileLoadFail: "Could not load the profile list: ",
+            profileSaveFail: "Failed to save the profile: ",
+            corruptProfile: "(corrupted file)",
+            corruptProfileAlert: "This profile is corrupted and cannot be opened. You can delete it.",
+            invalidNameProfile: "(invalid file name)",
+            repairNameButton: "Fix name",
+            repairNameFail: "Failed to rename: ",
+            invalidNameAlert: "This file name has characters that are not allowed. Use \"Fix name\" to rename it.",
+            notInApp: "Open this screen from the Arma Reforger Manager app."
         }
     };
 
@@ -175,14 +196,43 @@
         });
     }
 
+    // window.arsmm vem do preload.js do Electron; as chamadas devolvem { ok, data } ou { ok: false, code, error }.
+    const bridge = window.arsmm || null;
+    async function api(call) {
+        const result = await call;
+        if (result && result.ok) return result.data;
+        const err = new Error((result && result.error) || 'Erro desconhecido.');
+        err.code = result && result.code;
+        throw err;
+    }
+
     // 1. Carrega lista ao abrir
-    window.onload = () => { applyLocale(); loadProfiles(); };
+    window.onload = () => {
+        applyLocale();
+        if (!bridge) {
+            document.getElementById('profileList').textContent = t('notInApp');
+            return;
+        }
+        document.getElementById('wizAdminPass').value = generatePassword();
+        loadProfiles();
+    };
+
+    function generatePassword() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        const bytes = crypto.getRandomValues(new Uint8Array(16));
+        return Array.from(bytes, b => chars[b % chars.length]).join('');
+    }
 
     async function loadProfiles() {
-        const res = await fetch('/api/profiles');
-        const profiles = await res.json();
         const list = document.getElementById('profileList');
-        list.innerHTML = '';
+        let profiles;
+        try {
+            profiles = await api(bridge.profiles.list());
+        } catch (e) {
+            list.textContent = t('profileLoadFail') + e.message;
+            return;
+        }
+        list.replaceChildren();
 
         if (profiles.length === 0) {
             goToStep('method'); // Se não tem saves, vai direto pro setup
@@ -192,8 +242,33 @@
         profiles.forEach(p => {
             const div = document.createElement('div');
             div.className = 'save-item';
-            div.innerHTML = `<span style="flex:1">${p.name}</span> <small style="color:#666; margin-right:10px">${p.filename}</small> <button class="btn btn-sec" style="width:auto; padding:8px 12px;" onclick="event.stopPropagation(); deleteProfile('${p.filename}')">${t('deleteButton')}</button>`;
-            div.onclick = () => loadServer(p.filename);
+
+            const name = document.createElement('span');
+            name.style.flex = '1';
+            name.textContent = p.corrupt ? `${p.name} ${t('corruptProfile')}`
+                : p.invalidName ? `${p.name} ${t('invalidNameProfile')}` : p.name;
+
+            const file = document.createElement('small');
+            file.style.cssText = 'color:#666; margin-right:10px';
+            file.textContent = p.filename;
+
+            const action = document.createElement('button');
+            action.className = 'btn btn-sec';
+            action.style.cssText = 'width:auto; padding:8px 12px;';
+            if (p.invalidName) {
+                action.textContent = t('repairNameButton');
+                action.onclick = (event) => { event.stopPropagation(); repairProfileName(p.filename); };
+            } else {
+                action.textContent = t('deleteButton');
+                action.onclick = (event) => { event.stopPropagation(); deleteProfile(p.filename); };
+            }
+
+            div.append(name, file, action);
+            div.onclick = () => {
+                if (p.corrupt) alert(t('corruptProfileAlert'));
+                else if (p.invalidName) alert(t('invalidNameAlert'));
+                else loadServer(p.filename);
+            };
             list.appendChild(div);
         });
     }
@@ -207,9 +282,13 @@
         try {
             const txt = document.getElementById('importJson').value;
             const json = JSON.parse(txt);
+            if (!json || typeof json !== 'object' || Array.isArray(json) || !json.game || typeof json.game !== 'object') {
+                alert(t('invalidConfig'));
+                return;
+            }
             // Prepara a estrutura final com 'meta' e 'armaConfig'
             finalConfig = {
-                meta: { name: (json.game && json.game.name) ? json.game.name : "Servidor Importado", bmId: "" },
+                meta: { name: json.game.name ? String(json.game.name) : "Servidor Importado", bmId: "" },
                 armaConfig: json
             };
             goToStep('bm');
@@ -220,8 +299,8 @@
 
     function processWizard() {
         const name = document.getElementById('wizName').value || "Meu Servidor";
-        const adminPass = document.getElementById('wizAdminPass').value || "admin";
-        const players = parseInt(document.getElementById('wizPlayers').value) || 64;
+        const adminPass = document.getElementById('wizAdminPass').value.trim() || generatePassword();
+        const players = Math.min(128, Math.max(1, parseInt(document.getElementById('wizPlayers').value) || 64));
 
         // ESTRUTURA PADRÃO PEDIDA
         const baseConfig = {
@@ -269,11 +348,12 @@
         const filename = 'server_' + Date.now() + '.json';
 
         // Salva no backend
-        await fetch('/api/profiles/' + filename, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(finalConfig)
-        });
+        try {
+            await api(bridge.profiles.save(filename, finalConfig));
+        } catch (e) {
+            alert(t('profileSaveFail') + e.message);
+            return;
+        }
 
         // Carrega
         loadServer(filename);
@@ -281,32 +361,29 @@
 
     async function deleteProfile(filename) {
         if (!confirm(t('deleteConfirm'))) return;
-        const res = await fetch('/api/profiles/' + encodeURIComponent(filename), { method: 'DELETE' });
-        if (res.ok) {
+        try {
+            await api(bridge.profiles.remove(filename));
             loadProfiles();
-        } else {
-            const body = await res.json().catch(() => ({}));
-            alert(t('profileDeleteFail') + (body.error || res.statusText));
+        } catch (e) {
+            alert(t('profileDeleteFail') + e.message);
+        }
+    }
+
+    async function repairProfileName(filename) {
+        try {
+            await api(bridge.profiles.repairName(filename));
+            loadProfiles();
+        } catch (e) {
+            alert(t('repairNameFail') + e.message);
         }
     }
 
     function loadServer(filename) {
-        // Salva no localStorage qual server estamos usando para o index.html saber
-        localStorage.setItem('current_server_file', filename);
-        // Redireciona para o painel principal
-        window.location.href = '/panel';
+        // O painel recebe o perfil pela URL
+        window.location.href = 'index.html?profile=' + encodeURIComponent(filename);
     }
 
-    // Se o Electron pedir para fechar a janela durante o setup, permite sair.
-    try {
-        const { ipcRenderer } = require('electron');
-        ipcRenderer.on('app-closing', () => {
-            ipcRenderer.send('save-complete');
-        });
-    } catch (e) {
-        console.warn('Não foi possível inicializar o handler de fechamento do Electron:', e.message);
-    }
-
+    // Nesta tela não há nada para salvar ao fechar: o preload confirma o fechamento sozinho.
 </script>
 </body>
 </html>

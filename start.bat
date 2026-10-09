@@ -12,6 +12,18 @@ if not exist "node_modules" (
     )
 )
 
+rem O Electron baixa o executavel na primeira execucao; faz isso aqui, com a janela visivel.
+if not exist "node_modules\electron\dist\electron.exe" (
+    echo Baixando o Electron (so na primeira vez^)...
+    node node_modules\electron\install.js
+    if errorlevel 1 (
+        echo.
+        echo Falha ao baixar o Electron. Verifique sua conexao e tente de novo.
+        pause
+        exit /b 1
+    )
+)
+
 echo Iniciando o aplicativo...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process 'cmd.exe' -ArgumentList '/c npm start' -WorkingDirectory '%CD%' -WindowStyle Hidden"
+start "" "node_modules\electron\dist\electron.exe" .
 exit /b 0

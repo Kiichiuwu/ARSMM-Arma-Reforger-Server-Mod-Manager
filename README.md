@@ -9,7 +9,7 @@ Um gerenciador de servidor para Arma Reforger construído com Electron, Express 
 ### Visão geral
 
 É um aplicativo Electron sem servidor local: a interface (`setup.html` e `index.html`) fala com o processo principal (`main.js`) só por IPC, através do `preload.js`, e não abre nenhuma porta de rede.
-A lógica fica em `backend/`: perfis (`profiles.js`), configurações (`settings.js`), dados da Workshop (`workshop.js`), consulta direta ao servidor (`a2s.js`), BattleMetrics (`battlemetrics.js`) e RCON (`rcon.js` + `be-rcon.js`).
+A lógica fica em `backend/`: perfis (`profiles.js`), configurações (`settings.js`), dados da Workshop (`workshop.js`), consulta direta ao servidor (`a2s.js`), BattleMetrics (`battlemetrics.js`), RCON (`rcon.js` + `be-rcon.js`) e o terminal (`logger.js`). Em `shared/` ficam regras usadas pela interface e pelos testes: ordem de carregamento (`load-order.js`) e comparação de versão do jogo (`game-version.js`).
 A tela inicial (`setup.html`) lista os perfis; o painel (`index.html`) edita o perfil escolhido.
 Os perfis de servidor são salvos no diretório de dados do usuário do Windows (veja "Onde os arquivos são salvos").
 
@@ -37,6 +37,8 @@ Os perfis de servidor são salvos no diretório de dados do usuário do Windows 
 - Ordem de carregamento dos mods: a ordem da lista é a ordem gravada em `game.mods`. Dá para reordenar arrastando ou com os botões ▲ ▼ (também pelo teclado), cada mod mostra sua posição e o botão "Ordenar por dependências" coloca cada dependência antes do mod que a usa, mudando só o necessário. Dependências circulares geram aviso. "Instalar tudo" insere cada dependência logo antes do mod que precisa dela. A regra "dependência antes" vem de guias de hospedagem, não da documentação da Bohemia, por isso aparece como recomendação.
 
 - Versão do jogo de cada mod comparada com a do servidor (só major.minor), usando a versão que o servidor vai baixar: a fixada no config ou a mais recente, se o auto update estiver ligado. 🔴 mod feito para um jogo mais novo que o servidor, 🟡 "não atualizado desde a X.Y" (aviso, não erro: muitos mods antigos funcionam), 🟢 mesma versão, cinza quando falta dado. Mods marcados como obsoletos na Workshop ganham um selo próprio e o topo da lista mostra o resumo. A versão do servidor vem do Monitor (A2S) e fica salva no perfil, ou pode ser digitada à mão. A página do mod só lista as últimas 10 versões; para versões fixadas mais antigas, o app consulta o changelog da Workshop e guarda em cache.
+
+- Terminal ao vivo dividido (aba Outros): Principal (processo principal e interface), Backend (Workshop, RCON, A2S, BattleMetrics) e Erros (todo erro de qualquer origem), com contador de erros não lidos, filtro por módulo e botões copiar e limpar. Erros esperados (mod não encontrado, servidor sem resposta, token ausente) aparecem como aviso; exceções sem tratamento do processo principal e erros da interface também chegam ao terminal. A rolagem só acompanha as novas linhas quando você já está no fim. Mensagens repetidas (ex.: o Monitor consultando um servidor desligado a cada 15 s) aparecem uma vez a cada 5 minutos.
 
 - Interface de criação/importação de servidor
 
@@ -132,7 +134,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ### Overview
 
 It is an Electron app with no local server: the UI (`setup.html` and `index.html`) talks to the main process (`main.js`) only over IPC, through `preload.js`, and no network port is opened.
-The logic lives in `backend/`: profiles (`profiles.js`), settings (`settings.js`), Workshop data (`workshop.js`), direct server query (`a2s.js`), BattleMetrics (`battlemetrics.js`) and RCON (`rcon.js` + `be-rcon.js`).
+The logic lives in `backend/`: profiles (`profiles.js`), settings (`settings.js`), Workshop data (`workshop.js`), direct server query (`a2s.js`), BattleMetrics (`battlemetrics.js`), RCON (`rcon.js` + `be-rcon.js`) and the terminal (`logger.js`). `shared/` holds rules used by both the UI and the tests: load order (`load-order.js`) and game version comparison (`game-version.js`).
 The start screen (`setup.html`) lists the profiles; the panel (`index.html`) edits the selected one.
 Server profiles are saved in the user's Windows data directory (see "Where files are saved").
 
@@ -157,6 +159,8 @@ Server profiles are saved in the user's Windows data directory (see "Where files
 - Mod load order: the list order is the order written to `game.mods`. Reorder by dragging or with the ▲ ▼ buttons (keyboard too), each mod shows its position, and "Sort by dependencies" puts each dependency before the mod that uses it, moving only what is needed. Circular dependencies show a warning. "Install all" inserts each dependency right before the mod that needs it. The "dependency first" rule comes from hosting guides, not Bohemia's documentation, so it is shown as a recommendation.
 
 - Game version of each mod compared with the server's (major.minor only), using the version the server will download: the one pinned in the config, or the latest when auto update is on. 🔴 the mod targets a newer game than the server, 🟡 "not updated since X.Y" (a warning, not an error: many old mods keep working), 🟢 same version, gray when data is missing. Mods marked obsolete on the Workshop get their own badge, and a summary sits on top of the list. The server version comes from the Monitor (A2S) and is saved in the profile, or can be typed by hand. A mod page only lists its last 10 versions; for older pinned versions the app reads the Workshop changelog and caches it.
+
+- Split live terminal (Others tab): Main (main process and UI), Backend (Workshop, RCON, A2S, BattleMetrics) and Errors (every error from any source), with an unread error counter, a module filter and copy and clear buttons. Expected errors (mod not found, server not answering, missing token) show as warnings; unhandled main-process exceptions and UI errors reach the terminal too. Scrolling only follows new lines when you are already at the bottom. Repeated messages (e.g. the Monitor polling a server that is down every 15 s) show once every 5 minutes.
 
 - Create/import server configuration
 

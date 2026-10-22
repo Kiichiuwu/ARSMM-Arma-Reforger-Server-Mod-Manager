@@ -45,7 +45,9 @@ function parseInfo(buf) {
     return info;
 }
 
-function queryInfo(host, port, { timeout = 3000 } = {}) {
+// log(type, msg) registra resposta e falhas. Erros já registrados saem com `logged = true`,
+// para o main.js não registrar a mesma falha duas vezes.
+function queryInfo(host, port, { timeout = 3000, log = () => {} } = {}) {
     host = typeof host === 'string' ? host.trim() : '';
     port = Number.parseInt(port, 10);
     if (!host || host.length > 255 || !Number.isInteger(port) || port < 1 || port > 65535) {
@@ -63,7 +65,15 @@ function queryInfo(host, port, { timeout = 3000 } = {}) {
             finished = true;
             clearTimeout(timer);
             try { socket.close(); } catch (e) { /* já fechado */ }
-            if (err) reject(err); else resolve(value);
+            if (err) {
+                log(err.code === 'UPSTREAM' ? 'error' : 'warn', `${host}:${port}: ${err.message}`);
+                err.logged = true;
+                reject(err);
+            } else {
+                // A versão vai entre aspas: é o formato cru que o servidor devolve (usado na comparação dos mods).
+                log('info', `${host}:${port} respondeu: "${value.name}", versão do jogo ${JSON.stringify(value.version)}.`);
+                resolve(value);
+            }
         };
         const send = (payload) => {
             sentAt = Date.now();

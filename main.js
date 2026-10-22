@@ -8,6 +8,7 @@ const { createSettingsStore } = require('./backend/settings');
 const { createWorkshop } = require('./backend/workshop');
 const { createBattlemetrics } = require('./backend/battlemetrics');
 const { createRconManager } = require('./backend/rcon');
+const { createLogger } = require('./backend/logger');
 const a2s = require('./backend/a2s');
 
 // Duas instâncias abertas sobrescreveriam as edições uma da outra.
@@ -17,23 +18,30 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 const CLOSE_TIMEOUT_MS = 5000;
-const MAX_RECENT_LOGS = 200;
+const MAX_RECENT_LOGS = 200; // por fluxo (main, backend, ui, errors)
+const REPEAT_LOG_MS = 5 * 60 * 1000; // a mesma mensagem repetida nesse intervalo não vai de novo ao terminal
 const PAGES = ['setup.html', 'index.html'].map(page => path.join(__dirname, page));
 const WINDOW_EVENTS = new Set(['server-log', 'rcon-status', 'rcon-log']);
 
 let mainWindow = null;
 let isQuitting = false;
 let closeTimer = null;
-const recentLogs = [];
 
-// --- LOG (terminal da aba "Outros") ---
-function log(type, message) {
-    const entry = { type, msg: String(message).slice(0, 2000), time: new Date().toLocaleTimeString() };
-    (type === 'error' ? console.error : console.log)(entry.msg);
-    recentLogs.push(entry);
-    if (recentLogs.length > MAX_RECENT_LOGS) recentLogs.shift();
-    sendToWindow('server-log', entry);
+// --- LOG (terminal da aba "Outros": fluxos Principal, Backend e Erros) ---
+const logger = createLogger({ limit: MAX_RECENT_LOGS, emit: (entry) => sendToWindow('server-log', entry) });
+const log = logger.scoped('sistema', 'main');
+const ipcLog = logger.scoped('ipc', 'backend', { dedupeMs: REPEAT_LOG_MS });
+const uiLog = logger.scoped('console', 'ui', { dedupeMs: REPEAT_LOG_MS });
+const a2sLog = logger.scoped('a2s', 'backend', { dedupeMs: REPEAT_LOG_MS });
+
+function errorText(err) {
+    if (err instanceof Error) return err.stack || err.message;
+    try { return typeof err === 'string' ? err : JSON.stringify(err); } catch (e) { return String(err); }
 }
+
+// Exceções sem tratamento no processo principal: registra e segue (o app continua aberto, como antes).
+process.on('uncaughtException', (err) => log('error', `Exceção não tratada: ${errorText(err)}`));
+process.on('unhandledRejection', (reason) => log('error', `Promise rejeitada sem tratamento: ${errorText(reason)}`));
 
 function sendToWindow(channel, payload) {
     if (!WINDOW_EVENTS.has(channel) || !mainWindow || mainWindow.isDestroyed()) return;
@@ -44,9 +52,9 @@ function sendToWindow(channel, payload) {
 const dataDir = app.getPath('userData');
 const profiles = createProfileStore(path.join(dataDir, 'saves'));
 const settings = createSettingsStore(path.join(dataDir, 'settings.json'));
-const workshop = createWorkshop({ cacheFile: path.join(dataDir, 'mod-cache.json'), log });
-const battlemetrics = createBattlemetrics({ getToken: async () => (await settings.read()).battlemetricsToken, log });
-const rcon = createRconManager({ log });
+const workshop = createWorkshop({ cacheFile: path.join(dataDir, 'mod-cache.json'), log: logger.scoped('workshop') });
+const battlemetrics = createBattlemetrics({ getToken: async () => (await settings.read()).battlemetricsToken, log: logger.scoped('battlemetrics') });
+const rcon = createRconManager({ log: logger.scoped('rcon') });
 
 // --- SEGURANÇA: só as páginas do próprio app falam com o backend ---
 function samePath(a, b) {
@@ -81,8 +89,12 @@ function handle(channel, fn) {
         try {
             return { ok: true, data: await fn(event, ...args) };
         } catch (e) {
-            if (e instanceof BackendError) return { ok: false, code: e.code, error: e.message };
-            log('error', `[${channel}] ${e.message}`);
+            if (e instanceof BackendError) {
+                // Erro esperado (mod não encontrado, servidor sem resposta, token ausente...): aviso, não erro.
+                if (!e.logged) ipcLog('warn', `[${channel}] ${e.code}: ${e.message}`);
+                return { ok: false, code: e.code, error: e.message };
+            }
+            log('error', `[${channel}] ${errorText(e)}`);
             return { ok: false, code: 'ERROR', error: `Erro interno: ${e.message}` };
         }
     });
@@ -101,9 +113,9 @@ handle('battlemetrics:server', (e, id) => battlemetrics.getServer(id));
 handle('rcon:connect', (e, config) => rcon.connect(e.sender.id, config, sendToWindow));
 handle('rcon:send', (e, command) => rcon.send(e.sender.id, command));
 handle('rcon:players', (e) => rcon.players(e.sender.id));
-handle('monitor:query', (e, target) => a2s.queryInfo(target && target.host, target && target.port));
+handle('monitor:query', (e, target) => a2s.queryInfo(target && target.host, target && target.port, { log: a2sLog }));
 handle('rcon:disconnect', (e) => rcon.disconnect(e.sender.id));
-handle('logs:recent', () => recentLogs.slice());
+handle('logs:recent', (e, stream) => logger.recent(stream === undefined ? 'main' : stream));
 
 handle('dialog:save-text', async (e, request) => {
     const filename = path.basename(String((request && request.filename) || 'config.json'));
@@ -148,7 +160,20 @@ function createWindow() {
     });
     // Sair do painel encerra a sessão RCON daquela página.
     contents.on('did-navigate', () => rcon.disconnect(contents.id));
-    contents.on('render-process-gone', () => rcon.disconnect(contents.id));
+    contents.on('render-process-gone', (e, details) => {
+        log('error', `A interface caiu (${details && details.reason}, código ${details && details.exitCode}).`);
+        rcon.disconnect(contents.id);
+    });
+
+    // Avisos e erros da interface (inclusive exceções sem tratamento, que o Chromium manda ao console).
+    // Electron 44: o listener recebe um único objeto { level: 'info'|'warning'|'error'|'debug', message,
+    // lineNumber, sourceId, frame }; a forma antiga (event, level numérico, message, line, sourceId) é obsoleta.
+    contents.on('console-message', (details) => {
+        if (!details || (details.level !== 'warning' && details.level !== 'error')) return;
+        const source = details.sourceId ? ` (${path.basename(String(details.sourceId).split(/[?#]/)[0])}:${details.lineNumber})` : '';
+        uiLog(details.level === 'error' ? 'error' : 'warn', `${details.message}${source}`);
+    });
+    contents.on('preload-error', (e, preloadPath, error) => log('error', `Erro no preload: ${errorText(error)}`));
 
     mainWindow.loadFile('setup.html');
 
@@ -205,7 +230,7 @@ app.on('will-quit', () => {
 app.whenReady().then(() => {
     // A interface não precisa de câmera, microfone, notificações etc.
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => callback(false));
-    log('log', `[SISTEMA] Pasta de saves: ${profiles.dir}`);
+    log('log', `Pasta de saves: ${profiles.dir}`);
     createWindow();
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();

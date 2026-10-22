@@ -135,8 +135,22 @@
         .terminal-box { background: #0d0d0d; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; padding: 15px; border-radius: 6px; flex: 1; overflow-y: auto; border: 1px solid #333; font-size: 0.85em; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 2px; }
         .log-entry { word-break: break-all; }
         .log-error { color: #ff6b6b; }
+        .log-warn { color: #fbc02d; }
         .log-info { color: #e0e0e0; }
         .log-time { color: #555; margin-right: 10px; user-select: none; }
+        .log-module { color: #777; margin-right: 8px; }
+        .log-empty { color: #555; font-style: italic; }
+        .log-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .log-tabs { display: flex; background: #111; border: 1px solid #333; border-radius: 4px; overflow: hidden; }
+        .log-tab { background: none; border: none; color: #777; padding: 7px 12px; cursor: pointer; font-weight: bold; font-size: 0.8em; display: flex; align-items: center; gap: 6px; }
+        .log-tab:hover, .log-tab:focus-visible { color: #fff; background: #222; outline: none; }
+        .log-tab.active { color: var(--accent); background: #222; }
+        .log-unread { display: none; background: var(--danger); color: #fff; border-radius: 9px; padding: 0 6px; font-size: 0.85em; min-width: 10px; text-align: center; }
+        .log-unread.show { display: inline-block; }
+        .log-toolbar select { width: auto; min-width: 150px; padding: 6px 8px; font-size: 0.8em; }
+        .log-toolbar .btn-auto { margin: 0; }
+        .nav-badge { display: none; position: absolute; top: 9px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+        .nav-badge.show { display: block; }
         .backup-card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .backup-status { font-size: 0.9em; color: #777; display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 5px; }
 
@@ -195,7 +209,7 @@
             <div class="nav-icon-box">📈</div><span class="nav-label" data-i18n="nav.monitor">Monitor</span>
         </div>
         <div class="nav-item" onclick="switchView('others', this)">
-            <div class="nav-icon-box">🔧</div><span class="nav-label" data-i18n="nav.others">Outros</span>
+            <div class="nav-icon-box" style="position:relative;">🔧<span class="nav-badge" id="navLogBadge"></span></div><span class="nav-label" data-i18n="nav.others">Outros</span>
         </div>
     </nav>
 
@@ -344,8 +358,19 @@
         <div id="view-others" class="view-section">
             <div class="others-container">
                 <div class="col-half">
-                    <h3 style="color:var(--accent);" data-i18n="others.serverTerminal">SERVER TERMINAL (Real-Time)</h3>
-                    <div class="terminal-box" id="backendLog"><div class="log-entry"><span class="log-time">[Init]</span><span class="log-info" data-i18n="others.connecting">Connecting to local console stream...</span></div></div>
+                    <h3 style="color:var(--accent); margin-bottom:0;" data-i18n="others.serverTerminal">SERVER TERMINAL (Real-Time)</h3>
+                    <div class="log-toolbar">
+                        <div class="log-tabs" role="tablist">
+                            <button class="log-tab active" role="tab" aria-selected="true" data-log-tab="main" onclick="setLogTab('main')"><span data-i18n="logs.tabMain">PRINCIPAL</span></button>
+                            <button class="log-tab" role="tab" aria-selected="false" data-log-tab="backend" onclick="setLogTab('backend')"><span data-i18n="logs.tabBackend">BACKEND</span></button>
+                            <button class="log-tab" role="tab" aria-selected="false" data-log-tab="errors" onclick="setLogTab('errors')"><span data-i18n="logs.tabErrors">ERROS</span><span class="log-unread" id="logUnread"></span></button>
+                        </div>
+                        <select id="logModuleFilter" onchange="renderLogView()" data-i18n-title="logs.moduleFilter" title="Filtrar por módulo"></select>
+                        <span style="flex:1;"></span>
+                        <button class="btn-auto" id="btnCopyLogs" onclick="copyLogView()" data-i18n="logs.copy">COPIAR</button>
+                        <button class="btn-auto" onclick="clearLogView()" data-i18n="logs.clear">LIMPAR</button>
+                    </div>
+                    <div class="terminal-box" id="backendLog" role="log" aria-live="polite"></div>
                 </div>
                 <div class="col-half">
                     <h3 style="color:var(--accent);" data-i18n="others.configManagement">CONFIG MANAGEMENT</h3>
@@ -533,8 +558,17 @@
                 'yes': 'Sim',
                 'no': 'Não',
                 'others.serverTerminal': 'SERVER TERMINAL (Real-Time)',
-                'others.connecting': 'Connecting to local console stream...',
                 'others.configManagement': 'CONFIG MANAGEMENT',
+                'logs.tabMain': 'PRINCIPAL',
+                'logs.tabBackend': 'BACKEND',
+                'logs.tabErrors': 'ERROS',
+                'logs.moduleFilter': 'Filtrar por módulo',
+                'logs.allModules': 'Todos os módulos',
+                'logs.copy': 'COPIAR',
+                'logs.clear': 'LIMPAR',
+                'logs.copied': 'COPIADO!',
+                'logs.empty': 'Nenhuma mensagem ainda.',
+                'logs.unreadTitle': 'erro(s) não lido(s)',
                 'backup.status': 'Status do Backup:',
                 'backup.unknown': 'Desconhecido',
                 'button.saveBackup': 'SALVAR BACKUP (DISCO)',
@@ -715,8 +749,17 @@
                 'yes': 'Yes',
                 'no': 'No',
                 'others.serverTerminal': 'SERVER TERMINAL (Real-Time)',
-                'others.connecting': 'Connecting to local console stream...',
                 'others.configManagement': 'CONFIG MANAGEMENT',
+                'logs.tabMain': 'MAIN',
+                'logs.tabBackend': 'BACKEND',
+                'logs.tabErrors': 'ERRORS',
+                'logs.moduleFilter': 'Filter by module',
+                'logs.allModules': 'All modules',
+                'logs.copy': 'COPY',
+                'logs.clear': 'CLEAR',
+                'logs.copied': 'COPIED!',
+                'logs.empty': 'No messages yet.',
+                'logs.unreadTitle': 'unread error(s)',
                 'backup.status': 'Backup Status:',
                 'backup.unknown': 'Unknown',
                 'button.saveBackup': 'SAVE BACKUP (DISK)',
@@ -1438,7 +1481,7 @@
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
             $('view-' + viewName).classList.add('active');
-            if (viewName === 'others') updateJson();
+            if (viewName === 'others') { updateJson(); updateUnreadBadge(); }
             if (viewName === 'monitor' && val('monHost').trim()) refreshMonitor();
             updateMonitorTimer();
         }
@@ -1471,10 +1514,16 @@
         const serverLog = $('backendLog');
         const rconConsole = $('rconConsole');
 
+        // Só acompanha o fim se o usuário já estava lá; quem rolou para cima para ler não é puxado de volta.
+        function isScrolledToBottom(container) {
+            return container.scrollHeight - container.scrollTop - container.clientHeight < 24;
+        }
+
         function appendConsoleLine(container, node) {
+            const stick = isScrolledToBottom(container);
             container.appendChild(node);
             while (container.childElementCount > MAX_CONSOLE_LINES) container.firstElementChild.remove();
-            container.scrollTop = container.scrollHeight;
+            if (stick) container.scrollTop = container.scrollHeight;
         }
 
         function rconLine(text, className, color) {
@@ -1483,10 +1532,149 @@
             appendConsoleLine(rconConsole, line);
         }
 
-        function appendServerLog(entry) {
-            appendConsoleLine(serverLog, h('div', { class: 'log-entry' },
+        // --- TERMINAL AO VIVO (aba Outros) ---
+        // Principal = processo principal + interface; Backend = módulos (workshop, rcon, a2s...); Erros = todo
+        // level 'error' de qualquer origem. Cada aba guarda até MAX_CONSOLE_LINES entradas, ordenadas por seq.
+        const LOG_TAB_STREAMS = { main: ['main', 'ui'], backend: ['backend'], errors: ['errors'] };
+        const logStore = { main: [], backend: [], errors: [] };
+        let activeLogTab = 'main';
+        let unreadErrors = 0;
+
+        function normalizeLogEntry(entry) {
+            if (!isPlainObject(entry)) return null;
+            return {
+                seq: Number(entry.seq) || 0,
+                source: ['main', 'backend', 'ui'].includes(entry.source) ? entry.source : 'backend',
+                module: String(entry.module || ''),
+                level: ['error', 'warn', 'info'].includes(entry.level) ? entry.level : 'info',
+                msg: String(entry.msg ?? ''),
+                time: String(entry.time || ''),
+            };
+        }
+
+        function logTabsFor(entry) {
+            const tabs = [entry.source === 'backend' ? 'backend' : 'main'];
+            if (entry.level === 'error') tabs.push('errors');
+            return tabs;
+        }
+
+        // Junta entradas sem repetir (a mesma pode chegar pelo evento e pelo logs:recent) e mantém a ordem.
+        function mergeLogEntries(tab, entries) {
+            const bySeq = new Map(logStore[tab].map(e => [e.seq, e]));
+            for (const entry of entries) bySeq.set(entry.seq, entry);
+            logStore[tab] = [...bySeq.values()].sort((a, b) => a.seq - b.seq).slice(-MAX_CONSOLE_LINES);
+        }
+
+        function logLevelClass(level) { return level === 'error' ? 'log-error' : level === 'warn' ? 'log-warn' : 'log-info'; }
+
+        function logLineNode(entry) {
+            return h('div', { class: 'log-entry' },
                 h('span', { class: 'log-time' }, `[${entry.time}]`),
-                h('span', { class: entry.type === 'error' ? 'log-error' : 'log-info' }, entry.msg)));
+                h('span', { class: 'log-module' }, `[${entry.source === 'ui' ? 'ui' : entry.module || entry.source}]`),
+                h('span', { class: logLevelClass(entry.level) }, entry.msg));
+        }
+
+        function logFilterValue() { return $('logModuleFilter').value; }
+        function logMatchesFilter(entry) {
+            const filter = logFilterValue();
+            return !filter || (entry.source === 'ui' ? 'ui' : entry.module || entry.source) === filter;
+        }
+
+        function renderLogModuleFilter() {
+            const select = $('logModuleFilter');
+            const current = select.value;
+            const modules = [...new Set(logStore[activeLogTab].map(e => (e.source === 'ui' ? 'ui' : e.module || e.source)))].sort();
+            if (current && !modules.includes(current)) modules.push(current);
+            select.replaceChildren(h('option', { value: '' }, t('logs.allModules')), ...modules.map(m => h('option', { value: m }, m)));
+            select.value = current;
+        }
+
+        function renderLogView() {
+            const entries = logStore[activeLogTab].filter(logMatchesFilter);
+            const stick = isScrolledToBottom(serverLog);
+            serverLog.replaceChildren(...(entries.length
+                ? entries.map(logLineNode)
+                : [h('div', { class: 'log-entry log-empty' }, t('logs.empty'))]));
+            if (stick) serverLog.scrollTop = serverLog.scrollHeight;
+        }
+
+        function isErrorsTabVisible() { return activeLogTab === 'errors' && $('view-others').classList.contains('active'); }
+
+        function updateUnreadBadge() {
+            if (isErrorsTabVisible()) unreadErrors = 0;
+            const badge = $('logUnread');
+            badge.textContent = unreadErrors > 99 ? '99+' : String(unreadErrors);
+            badge.title = `${unreadErrors} ${t('logs.unreadTitle')}`;
+            badge.classList.toggle('show', unreadErrors > 0);
+            $('navLogBadge').classList.toggle('show', unreadErrors > 0);
+            $('navLogBadge').title = badge.title;
+        }
+
+        function setLogTab(tab) {
+            if (!LOG_TAB_STREAMS[tab]) return;
+            activeLogTab = tab;
+            document.querySelectorAll('.log-tab').forEach(btn => {
+                const active = btn.dataset.logTab === tab;
+                btn.classList.toggle('active', active);
+                btn.setAttribute('aria-selected', String(active));
+            });
+            $('logModuleFilter').value = '';
+            renderLogModuleFilter();
+            renderLogView();
+            serverLog.scrollTop = serverLog.scrollHeight;
+            updateUnreadBadge();
+        }
+
+        function appendServerLog(raw) {
+            const entry = normalizeLogEntry(raw);
+            if (!entry) return;
+            for (const tab of logTabsFor(entry)) {
+                const store = logStore[tab];
+                if (store.length && store[store.length - 1].seq >= entry.seq) mergeLogEntries(tab, [entry]);
+                else { store.push(entry); if (store.length > MAX_CONSOLE_LINES) store.shift(); }
+                if (tab !== activeLogTab) continue;
+                if (serverLog.querySelector('.log-empty')) serverLog.replaceChildren();
+                if (logMatchesFilter(entry)) appendConsoleLine(serverLog, logLineNode(entry));
+                const select = $('logModuleFilter');
+                const label = entry.source === 'ui' ? 'ui' : entry.module || entry.source;
+                if (![...select.options].some(o => o.value === label)) renderLogModuleFilter();
+            }
+            if (entry.level === 'error' && !isErrorsTabVisible()) unreadErrors++;
+            updateUnreadBadge();
+        }
+
+        async function loadRecentLogs() {
+            const results = await Promise.all(['main', 'ui', 'backend', 'errors'].map(stream =>
+                api(bridge.logs.recent(stream)).catch(() => [])));
+            const [main, ui, backend, errors] = results.map(list => (Array.isArray(list) ? list : []).map(normalizeLogEntry).filter(Boolean));
+            mergeLogEntries('main', [...main, ...ui]);
+            mergeLogEntries('backend', backend);
+            mergeLogEntries('errors', errors);
+            renderLogModuleFilter();
+            renderLogView();
+        }
+
+        async function copyLogView() {
+            const text = logStore[activeLogTab].filter(logMatchesFilter)
+                .map(e => `[${e.time}] [${e.source}/${e.module}] ${e.level.toUpperCase()} ${e.msg}`).join('\n');
+            try {
+                await api(bridge.copyText(text));
+            } catch (e) {
+                alert(t('copyError') + e.message);
+                return;
+            }
+            const btn = $('btnCopyLogs');
+            btn.textContent = t('logs.copied');
+            setTimeout(() => { btn.textContent = t('logs.copy'); }, 1500);
+        }
+
+        // Limpa só a visualização desta aba (o buffer do processo principal continua).
+        function clearLogView() {
+            logStore[activeLogTab] = [];
+            if (activeLogTab === 'errors') unreadErrors = 0;
+            renderLogModuleFilter();
+            renderLogView();
+            updateUnreadBadge();
         }
 
         function setRconStatus(status) {
@@ -1513,7 +1701,9 @@
         bridge.on('server-log', appendServerLog);
         bridge.on('rcon-log', (msg) => rconLine(`[LOG] ${msg}`, 'res', '#aaa'));
         bridge.on('rcon-status', setRconStatus); // quedas de uma sessão já conectada
-        api(bridge.logs.recent()).then(entries => entries.forEach(appendServerLog)).catch(() => {});
+        renderLogModuleFilter();
+        renderLogView();
+        loadRecentLogs();
 
         async function realConnectRcon() {
             if (rconConnected) {

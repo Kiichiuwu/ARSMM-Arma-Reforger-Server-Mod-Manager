@@ -69,6 +69,20 @@
         .mod-info { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
         .mod-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 
+        /* ORDEM DE CARREGAMENTO */
+        .mod-order { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; width: 34px; }
+        .mod-pos { font-size: 0.75em; color: #777; font-family: 'Consolas', monospace; }
+        .btn-move { background: none; border: 1px solid #444; color: #aaa; cursor: pointer; width: 26px; height: 18px; line-height: 1; padding: 0; border-radius: 3px; font-size: 0.7em; }
+        .btn-move:hover:not(:disabled), .btn-move:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+        .btn-move:disabled { opacity: 0.3; cursor: default; }
+        .mod-item[draggable="true"] { cursor: grab; }
+        .mod-item.dragging { opacity: 0.4; }
+        .mod-item.drop-before { box-shadow: inset 0 3px 0 var(--accent); }
+        .mod-item.drop-after { box-shadow: inset 0 -3px 0 var(--accent); }
+        .order-warning { font-size: 0.75em; color: var(--accent); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mods-summary { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 0.8em; margin-bottom: 10px; color: #888; }
+        .mods-summary .btn-auto { margin: 0; }
+
         /* GRID VIEW */
         .mod-list.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; padding: 15px; align-content: start; }
         .mod-list.grid-view .mod-item { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 6px; padding: 0; overflow: hidden; margin-bottom: 0; background: #222; height: auto; min-height: 260px; }
@@ -76,6 +90,9 @@
         .mod-list.grid-view .mod-thumb { width: 100%; height: 140px; border-radius: 0; border: none; border-bottom: 1px solid #333; }
         .mod-list.grid-view .mod-info { padding: 12px; justify-content: flex-start; flex: 0 0 auto; }
         .mod-list.grid-view .mod-actions { margin-top: auto; padding: 10px 12px; border-top: 1px solid #333; width: 100%; box-sizing: border-box; background: #1a1a1a; justify-content: space-between; }
+        .mod-list.grid-view .mod-order { flex-direction: row; width: auto; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #333; background: #1a1a1a; }
+        .mod-list.grid-view .mod-item.drop-before { box-shadow: inset 3px 0 0 var(--accent); }
+        .mod-list.grid-view .mod-item.drop-after { box-shadow: inset -3px 0 0 var(--accent); }
 
         .btn-auto { background: none; border: 1px solid #555; color: #555; cursor: pointer; font-weight: bold; padding: 5px 10px; border-radius: 4px; margin-right: 5px; transition: 0.2s; font-size: 0.8em; display: flex; align-items: center; gap: 5px; }
         .btn-auto.active { border-color: var(--success); color: var(--success); background: rgba(102, 187, 106, 0.1); }
@@ -212,6 +229,10 @@
                         <button class="btn-large" style="width:auto; background:var(--danger); color:#fff;" onclick="clearMods()" data-i18n="button.clearMods">LIMPAR</button>
                     </div>
                     <div style="margin-bottom: 10px;"><input type="text" id="modSearch" data-i18n-placeholder="placeholderFilterMods" placeholder="🔍 Filtrar por nome ou ID..." style="width:100%; background: #000; border: 1px solid #444; padding: 10px; color: var(--accent); box-sizing: border-box;" oninput="scheduleRender()"></div>
+                    <div class="mods-summary">
+                        <button class="btn-auto" onclick="sortModsByDependencies()" data-i18n="order.sortButton" data-i18n-title="order.sortTitle" title="Coloca cada dependência antes do mod que a usa, mudando só o necessário (recomendado, não garantido pela Bohemia)">ORDENAR POR DEPENDÊNCIAS</button>
+                        <span id="orderSummary"></span>
+                    </div>
                     <div class="mod-list" id="modListContainer"></div>
                 </div>
             </div>
@@ -320,6 +341,7 @@
 
     <div id="modalImport" class="modal"><div class="modal-box"><h3 style="color:var(--accent);" data-i18n="modal.importConfig">IMPORTAR CONFIG</h3><textarea id="importText" rows="10" style="background:#000; color:#fff; width:100%; font-family:monospace;"></textarea><br><br><button class="btn-large btn-primary" onclick="processImport()" data-i18n="button.processImport">PROCESSAR</button><button class="btn-large btn-sec" style="margin-top:5px;" onclick="document.getElementById('modalImport').style.display='none'" data-i18n="button.cancel">CANCELAR</button></div></div>
 
+<script src="shared/load-order.js"></script>
 <script>
         // --- INTEGRAÇÃO COM O ELECTRON ---
         // window.arsmm vem do preload.js; as chamadas devolvem { ok, data } ou { ok: false, code, error }.
@@ -395,6 +417,16 @@
                 'invalidModId': 'ID inválido',
                 'modAlreadyAdded': 'Esse mod já está na lista.',
                 'clearModsConfirm': 'Remover todos os mods da lista?',
+                'order.sortButton': 'ORDENAR POR DEPENDÊNCIAS',
+                'order.sortTitle': 'Coloca cada dependência antes do mod que a usa, mudando só o necessário (recomendado, não garantido pela Bohemia)',
+                'order.moveUp': 'Subir na ordem de carregamento',
+                'order.moveDown': 'Descer na ordem de carregamento',
+                'order.position': 'Posição na ordem de carregamento (a ordem do array "mods" do config). Arraste para reordenar.',
+                'order.before': 'Antes da dependência:',
+                'order.beforeTitle': 'Recomendado: a dependência deve vir antes do mod que a usa (regra de guias de hospedagem, não garantida pela Bohemia).',
+                'order.issues': 'mod(s) antes de uma dependência (recomendado: dependência primeiro)',
+                'order.ok': 'Dependências antes dos mods que as usam.',
+                'order.cycle': 'Dependência circular (não dá para ordenar):',
                 'rcon.title': 'RCON MANAGER',
                 'rcon.notEnabled': 'Recurso não ativado no JSON',
                 'rcon.install': 'INSTALAR RCON',
@@ -549,6 +581,16 @@
                 'invalidModId': 'Invalid ID',
                 'modAlreadyAdded': 'This mod is already in the list.',
                 'clearModsConfirm': 'Remove all mods from the list?',
+                'order.sortButton': 'SORT BY DEPENDENCIES',
+                'order.sortTitle': 'Puts each dependency before the mod that uses it, moving only what is needed (recommended, not guaranteed by Bohemia)',
+                'order.moveUp': 'Move up in the load order',
+                'order.moveDown': 'Move down in the load order',
+                'order.position': 'Position in the load order (the order of the config "mods" array). Drag to reorder.',
+                'order.before': 'Before its dependency:',
+                'order.beforeTitle': 'Recommended: a dependency should come before the mod that uses it (a hosting-guide rule, not guaranteed by Bohemia).',
+                'order.issues': 'mod(s) placed before a dependency (recommended: dependency first)',
+                'order.ok': 'Dependencies come before the mods that use them.',
+                'order.cycle': 'Circular dependency (cannot be sorted):',
                 'rcon.title': 'RCON MANAGER',
                 'rcon.notEnabled': 'Feature not enabled in JSON',
                 'rcon.install': 'INSTALL RCON',
@@ -864,12 +906,101 @@
             refreshModMetadata();
         }
 
+        // Cada dependência entra logo antes do mod que precisa dela (ordem de carga recomendada).
         function addAllDeps(parent) {
             for (const dep of parent.dependencies) {
-                if (!findMod(dep.id)) modList.push(newMod(dep.id, dep.name));
+                if (findMod(dep.id)) continue;
+                const at = modList.indexOf(parent);
+                modList.splice(at < 0 ? modList.length : at, 0, newMod(dep.id, dep.name));
             }
             scheduleRender();
             refreshModMetadata();
+        }
+
+        // --- ORDEM DE CARREGAMENTO ---
+        // A ordem de modList é a ordem gravada em game.mods; qualquer mudança entra no snapshot de salvamento.
+        const loadOrder = window.ARSMM_LOAD_ORDER;
+        let draggedMod = null;
+        let focusAfterRender = null; // { modId, dir }: devolve o foco ao botão ▲/▼ depois do render (teclado)
+
+        function moveMod(mod, delta, dir) {
+            const from = modList.indexOf(mod);
+            const to = from + delta;
+            if (from < 0 || to < 0 || to >= modList.length) return;
+            modList = loadOrder.moveItem(modList, from, to);
+            focusAfterRender = { modId: mod.modId, dir };
+            scheduleRender();
+        }
+
+        // Índices reais de modList, então funciona mesmo com o filtro escondendo mods no meio.
+        function moveModNextTo(mod, target, after) {
+            const from = modList.indexOf(mod);
+            let to = modList.indexOf(target);
+            if (from < 0 || to < 0 || mod === target) return;
+            if (after) to++;
+            if (from < to) to--;
+            modList = loadOrder.moveItem(modList, from, to);
+            scheduleRender();
+        }
+
+        function sortModsByDependencies() {
+            modList = loadOrder.sortByDependencies(modList).order;
+            scheduleRender();
+        }
+
+        function dropAfter(event, item) {
+            const rect = item.getBoundingClientRect();
+            return currentModView === 'grid'
+                ? event.clientX > rect.left + rect.width / 2
+                : event.clientY > rect.top + rect.height / 2;
+        }
+
+        function clearDropMarks() {
+            document.querySelectorAll('.mod-item.drop-before, .mod-item.drop-after').forEach(el => el.classList.remove('drop-before', 'drop-after'));
+        }
+
+        function makeDraggable(item, mod) {
+            item.setAttribute('draggable', 'true');
+            item.addEventListener('dragstart', (e) => {
+                draggedMod = mod;
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', mod.modId);
+            });
+            item.addEventListener('dragend', () => { draggedMod = null; item.classList.remove('dragging'); clearDropMarks(); });
+            item.addEventListener('dragover', (e) => {
+                if (!draggedMod || draggedMod === mod) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const after = dropAfter(e, item);
+                item.classList.toggle('drop-before', !after);
+                item.classList.toggle('drop-after', after);
+            });
+            item.addEventListener('dragleave', () => item.classList.remove('drop-before', 'drop-after'));
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                clearDropMarks();
+                if (draggedMod && draggedMod !== mod) moveModNextTo(draggedMod, mod, dropAfter(e, item));
+            });
+        }
+
+        function modNameById(id) {
+            const mod = findMod(id);
+            return (mod && modDisplayName(mod)) || id;
+        }
+
+        function renderOrderSummary(issues, cycles) {
+            const summary = $('orderSummary');
+            if (cycles.length) {
+                summary.style.color = 'var(--danger)';
+                summary.textContent = `⚠ ${t('order.cycle')} ${cycles.map(c => c.map(modNameById).join(' → ')).join('; ')}`;
+            } else if (issues.size) {
+                summary.style.color = 'var(--accent)';
+                summary.textContent = `⚠ ${issues.size} ${t('order.issues')}`;
+            } else {
+                summary.style.color = '#666';
+                summary.textContent = modList.length ? `✓ ${t('order.ok')}` : '';
+            }
         }
 
         function delMod(mod) {
@@ -917,15 +1048,26 @@
             const term = val('modSearch').trim().toLowerCase();
             list.classList.toggle('grid-view', currentModView === 'grid');
 
+            const orderIssues = loadOrder.findOrderIssues(modList);
+            renderOrderSummary(orderIssues, loadOrder.sortByDependencies(modList).cycles);
+
             const fragment = document.createDocumentFragment();
             let visibleCount = 0;
-            for (const mod of modList) {
+            modList.forEach((mod, index) => {
                 const names = `${mod.name} ${mod.workshopName}`.toLowerCase();
-                if (term && !names.includes(term) && !mod.modId.toLowerCase().includes(term)) continue;
+                if (term && !names.includes(term) && !mod.modId.toLowerCase().includes(term)) return;
                 visibleCount++;
-                fragment.appendChild(renderModItem(mod));
-            }
+                fragment.appendChild(renderModItem(mod, index, orderIssues.get(mod.modId.toUpperCase()) || []));
+            });
             list.replaceChildren(fragment);
+
+            if (focusAfterRender) {
+                const { modId, dir } = focusAfterRender;
+                focusAfterRender = null;
+                const btn = list.querySelector(`.mod-item[data-mod-id="${CSS.escape(modId)}"] .btn-move[data-dir="${dir}"]`);
+                if (btn && !btn.disabled) btn.focus();
+                else if (btn) btn.parentElement.querySelector('.btn-move:not(:disabled)')?.focus();
+            }
 
             const totalGB = modList.reduce((sum, m) => sum + (m.sizeBytes || 0), 0) / 1024 ** 3;
             $('storageText').textContent = `${totalGB.toFixed(2)} GB / ${STORAGE_LIMIT_GB} GB`;
@@ -936,7 +1078,7 @@
             updateJson();
         }
 
-        function renderModItem(mod) {
+        function renderModItem(mod, index, lateDeps) {
             const isAuto = globalAutoUpdate || mod.autoUpdate;
             const displayName = modDisplayName(mod) || `Mod ${mod.modId}`;
             const nameTitle = mod.workshopName && mod.workshopName !== displayName ? `${displayName} (Workshop: ${mod.workshopName})` : displayName;
@@ -966,17 +1108,37 @@
                 statusNode = h('span', { style: 'font-size:0.8em; color:var(--danger);', title: t('mods.notFoundTitle') }, ` ${t('mods.notFound')}`);
             }
 
-            const thumb = h('img', { class: 'mod-thumb', loading: 'lazy', alt: '', src: mod.image || EMPTY_IMAGE });
+            // draggable=false: arrastar a imagem/link não pode competir com o arraste do item.
+            const thumb = h('img', { class: 'mod-thumb', loading: 'lazy', alt: '', draggable: 'false', src: mod.image || EMPTY_IMAGE });
             const thumbBox = MOD_ID_RE.test(mod.modId)
-                ? h('a', { href: `https://reforger.armaplatform.com/workshop/${mod.modId.toUpperCase()}`, target: '_blank', rel: 'noopener', title: t('mods.openWorkshop'), style: 'display:block; flex-shrink:0;' }, thumb)
+                ? h('a', { href: `https://reforger.armaplatform.com/workshop/${mod.modId.toUpperCase()}`, target: '_blank', rel: 'noopener', draggable: 'false', title: t('mods.openWorkshop'), style: 'display:block; flex-shrink:0;' }, thumb)
                 : h('div', { style: 'flex-shrink:0;' }, thumb);
 
-            const item = h('div', { class: 'mod-item' },
+            const orderBox = h('div', { class: 'mod-order' },
+                h('button', {
+                    class: 'btn-move', 'data-dir': 'up', title: t('order.moveUp'), 'aria-label': `${t('order.moveUp')}: ${displayName}`,
+                    onclick: () => moveMod(mod, -1, 'up'),
+                }, '▲'),
+                h('span', { class: 'mod-pos', title: t('order.position') }, `#${index + 1}`),
+                h('button', {
+                    class: 'btn-move', 'data-dir': 'down', title: t('order.moveDown'), 'aria-label': `${t('order.moveDown')}: ${displayName}`,
+                    onclick: () => moveMod(mod, 1, 'down'),
+                }, '▼'));
+            orderBox.firstChild.disabled = index === 0;
+            orderBox.lastChild.disabled = index === modList.length - 1;
+
+            const orderWarning = lateDeps.length
+                ? h('div', { class: 'order-warning', title: t('order.beforeTitle') }, `⚠ ${t('order.before')} ${lateDeps.map(modNameById).join(', ')}`)
+                : null;
+
+            const item = h('div', { class: 'mod-item', 'data-mod-id': mod.modId },
                 h('div', { class: 'mod-content-row' },
+                    orderBox,
                     thumbBox,
                     h('div', { class: 'mod-info' },
                         h('div', { style: 'font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;', title: nameTitle }, displayName, statusNode),
-                        versionRow),
+                        versionRow,
+                        orderWarning),
                     h('div', { class: 'mod-actions' },
                         h('span', { style: 'color:var(--accent); font-weight:bold; min-width:80px; text-align:right; margin-right:10px;' }, formatBytes(mod.sizeBytes)),
                         h('button', { class: isAuto ? 'btn-auto active' : 'btn-auto', title: t('mods.autoTitle'), onclick: () => toggleModAutoUpdate(mod) }, '↻'),
@@ -988,6 +1150,7 @@
                     h('div', { class: 'dep-info-text' }, `${t('mods.missingDeps')} `, h('span', { class: 'dep-names-list' }, missing.map(d => d.name || d.id).join(', '))),
                     h('button', { class: 'btn-install-all', onclick: () => addAllDeps(mod) }, `${t('mods.installAll')} (${missing.length})`)));
             }
+            makeDraggable(item, mod);
             return item;
         }
 

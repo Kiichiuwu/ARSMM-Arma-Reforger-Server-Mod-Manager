@@ -34,6 +34,8 @@ Os perfis de servidor são salvos no diretório de dados do usuário do Windows 
 
 <img width="980" height="814" alt="image" src="https://github.com/user-attachments/assets/e963bb34-6fff-4439-8df2-e9435334e2a5" />
 
+- Ordem de carregamento dos mods: a ordem da lista é a ordem gravada em `game.mods`. Dá para reordenar arrastando ou com os botões ▲ ▼ (também pelo teclado), cada mod mostra sua posição e o botão "Ordenar por dependências" coloca cada dependência antes do mod que a usa, mudando só o necessário. Dependências circulares geram aviso. "Instalar tudo" insere cada dependência logo antes do mod que precisa dela. A regra "dependência antes" vem de guias de hospedagem, não da documentação da Bohemia, por isso aparece como recomendação.
+
 - Interface de criação/importação de servidor
 
 <img width="350" height="153" alt="image" src="https://github.com/user-attachments/assets/3589a494-4dde-4cb4-98a5-a4b9db0b8f29" />
@@ -149,6 +151,8 @@ Server profiles are saved in the user's Windows data directory (see "Where files
 - Reforger Workshop mod scraping
 
 <img width="980" height="814" alt="image" src="https://github.com/user-attachments/assets/e963bb34-6fff-4439-8df2-e9435334e2a5" />
+
+- Mod load order: the list order is the order written to `game.mods`. Reorder by dragging or with the ▲ ▼ buttons (keyboard too), each mod shows its position, and "Sort by dependencies" puts each dependency before the mod that uses it, moving only what is needed. Circular dependencies show a warning. "Install all" inserts each dependency right before the mod that needs it. The "dependency first" rule comes from hosting guides, not Bohemia's documentation, so it is shown as a recommendation.
 
 - Create/import server configuration
 

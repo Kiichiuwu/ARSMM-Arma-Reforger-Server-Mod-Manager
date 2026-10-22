@@ -36,6 +36,8 @@ Os perfis de servidor são salvos no diretório de dados do usuário do Windows 
 
 - Ordem de carregamento dos mods: a ordem da lista é a ordem gravada em `game.mods`. Dá para reordenar arrastando ou com os botões ▲ ▼ (também pelo teclado), cada mod mostra sua posição e o botão "Ordenar por dependências" coloca cada dependência antes do mod que a usa, mudando só o necessário. Dependências circulares geram aviso. "Instalar tudo" insere cada dependência logo antes do mod que precisa dela. A regra "dependência antes" vem de guias de hospedagem, não da documentação da Bohemia, por isso aparece como recomendação.
 
+- Versão do jogo de cada mod comparada com a do servidor (só major.minor), usando a versão que o servidor vai baixar: a fixada no config ou a mais recente, se o auto update estiver ligado. 🔴 mod feito para um jogo mais novo que o servidor, 🟡 "não atualizado desde a X.Y" (aviso, não erro: muitos mods antigos funcionam), 🟢 mesma versão, cinza quando falta dado. Mods marcados como obsoletos na Workshop ganham um selo próprio e o topo da lista mostra o resumo. A versão do servidor vem do Monitor (A2S) e fica salva no perfil, ou pode ser digitada à mão. A página do mod só lista as últimas 10 versões; para versões fixadas mais antigas, o app consulta o changelog da Workshop e guarda em cache.
+
 - Interface de criação/importação de servidor
 
 <img width="350" height="153" alt="image" src="https://github.com/user-attachments/assets/3589a494-4dde-4cb4-98a5-a4b9db0b8f29" />
@@ -50,7 +52,7 @@ Os dados capturados incluem nomes, descrições, IDs e outras metadatas dos mods
 
 Infelizmente, a ausência de uma API dedicada torna o processo mais frágil, já que mudanças no layout do site podem quebrar a funcionalidade. Esperamos que a Bohemia Interactive considere implementar uma API oficial em futuras atualizações.
 
-Para reduzir essa fragilidade, o app lê os dados estruturados que a própria página publica (`<script id="__NEXT_DATA__">`) em vez de procurar texto no HTML, consulta no máximo 4 mods ao mesmo tempo e guarda os resultados em cache (`mod-cache.json`) por 6 horas.
+Para reduzir essa fragilidade, o app lê os dados estruturados que a própria página publica (`<script id="__NEXT_DATA__">`) em vez de procurar texto no HTML, consulta no máximo 4 mods ao mesmo tempo e guarda os resultados em cache (`mod-cache.json`) por 6 horas. O cache tem um número de esquema: quando os campos guardados mudam, um cache antigo é descartado e baixado de novo.
 
 ### Requisitos
 
@@ -154,6 +156,8 @@ Server profiles are saved in the user's Windows data directory (see "Where files
 
 - Mod load order: the list order is the order written to `game.mods`. Reorder by dragging or with the ▲ ▼ buttons (keyboard too), each mod shows its position, and "Sort by dependencies" puts each dependency before the mod that uses it, moving only what is needed. Circular dependencies show a warning. "Install all" inserts each dependency right before the mod that needs it. The "dependency first" rule comes from hosting guides, not Bohemia's documentation, so it is shown as a recommendation.
 
+- Game version of each mod compared with the server's (major.minor only), using the version the server will download: the one pinned in the config, or the latest when auto update is on. 🔴 the mod targets a newer game than the server, 🟡 "not updated since X.Y" (a warning, not an error: many old mods keep working), 🟢 same version, gray when data is missing. Mods marked obsolete on the Workshop get their own badge, and a summary sits on top of the list. The server version comes from the Monitor (A2S) and is saved in the profile, or can be typed by hand. A mod page only lists its last 10 versions; for older pinned versions the app reads the Workshop changelog and caches it.
+
 - Create/import server configuration
 
 <img width="349" height="151" alt="image" src="https://github.com/user-attachments/assets/0e387004-9d03-4aa5-8c78-2082effc1682" />
@@ -169,7 +173,7 @@ The captured data includes mod names, descriptions, IDs, and other metadata from
 
 Unfortunately, the lack of a dedicated API makes the process more fragile, as changes to the website's layout can break functionality. We hope Bohemia Interactive will consider implementing an official API in future updates.
 
-To reduce that fragility, the app reads the structured data the page itself publishes (`<script id="__NEXT_DATA__">`) instead of searching the HTML text, queries at most 4 mods at a time and caches the results (`mod-cache.json`) for 6 hours.
+To reduce that fragility, the app reads the structured data the page itself publishes (`<script id="__NEXT_DATA__">`) instead of searching the HTML text, queries at most 4 mods at a time and caches the results (`mod-cache.json`) for 6 hours. The cache carries a schema number: when the stored fields change, an old cache is discarded and fetched again.
 
 ### Requirements
 

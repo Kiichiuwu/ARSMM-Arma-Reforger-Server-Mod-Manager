@@ -96,6 +96,7 @@ handle('profiles:repair-name', (e, filename) => profiles.repairName(filename));
 handle('settings:get', () => settings.getPublic());
 handle('settings:update', (e, changes) => settings.update(changes));
 handle('workshop:mod', (e, id, options) => workshop.getMod(id, { refresh: !!(options && options.refresh) }));
+handle('workshop:game-version', (e, id, version) => workshop.getGameVersion(id, version));
 handle('battlemetrics:server', (e, id) => battlemetrics.getServer(id));
 handle('rcon:connect', (e, config) => rcon.connect(e.sender.id, config, sendToWindow));
 handle('rcon:send', (e, command) => rcon.send(e.sender.id, command));

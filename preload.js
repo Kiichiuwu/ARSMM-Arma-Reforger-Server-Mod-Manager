@@ -33,7 +33,7 @@ contextBridge.exposeInMainWorld('arsmm', {
         get: invoke('settings:get'),
         update: invoke('settings:update'),
     },
-    workshop: { getMod: invoke('workshop:mod') },
+    workshop: { getMod: invoke('workshop:mod'), getGameVersion: invoke('workshop:game-version') },
     battlemetrics: { getServer: invoke('battlemetrics:server') },
     monitor: { query: invoke('monitor:query') },
     rcon: {

@@ -83,6 +83,20 @@
         .mods-summary { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 0.8em; margin-bottom: 10px; color: #888; }
         .mods-summary .btn-auto { margin: 0; }
 
+        /* VERSÃO DO JOGO */
+        .gv-badge { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 1px 6px; border-radius: 3px; font-size: 0.9em; border: 1px solid #444; color: #888; cursor: help; white-space: nowrap; }
+        .gv-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #666; flex-shrink: 0; }
+        .gv-badge.gv-newer { border-color: var(--danger); color: var(--danger); }
+        .gv-badge.gv-newer::before { background: var(--danger); }
+        .gv-badge.gv-older { border-color: #fbc02d; color: #fbc02d; }
+        .gv-badge.gv-older::before { background: #fbc02d; }
+        .gv-badge.gv-same { border-color: var(--success); color: var(--success); }
+        .gv-badge.gv-same::before { background: var(--success); }
+        .obsolete-badge { margin-left: 6px; padding: 1px 6px; border-radius: 3px; font-size: 0.9em; background: #4a1f1f; color: #ff8a80; border: 1px solid var(--danger); cursor: help; white-space: nowrap; }
+        .server-gv { display: flex; align-items: center; gap: 6px; }
+        .server-gv input { width: 120px; padding: 5px 8px; font-size: 0.95em; background: #000; }
+        #gameVersionSummary { color: #fbc02d; }
+
         /* GRID VIEW */
         .mod-list.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; padding: 15px; align-content: start; }
         .mod-list.grid-view .mod-item { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 6px; padding: 0; overflow: hidden; margin-bottom: 0; background: #222; height: auto; min-height: 260px; }
@@ -232,6 +246,9 @@
                     <div class="mods-summary">
                         <button class="btn-auto" onclick="sortModsByDependencies()" data-i18n="order.sortButton" data-i18n-title="order.sortTitle" title="Coloca cada dependência antes do mod que a usa, mudando só o necessário (recomendado, não garantido pela Bohemia)">ORDENAR POR DEPENDÊNCIAS</button>
                         <span id="orderSummary"></span>
+                        <span style="flex:1;"></span>
+                        <span id="gameVersionSummary"></span>
+                        <label class="server-gv" data-i18n-title="gv.serverTitle" title="Versão do jogo no servidor. O Monitor preenche sozinho (consulta A2S); dá para digitar à mão."><span data-i18n="gv.serverLabel">JOGO NO SERVIDOR</span><input type="text" id="serverGameVersion" maxlength="32" placeholder="1.8.0.13" oninput="scheduleRender()"></label>
                     </div>
                     <div class="mod-list" id="modListContainer"></div>
                 </div>
@@ -342,6 +359,7 @@
     <div id="modalImport" class="modal"><div class="modal-box"><h3 style="color:var(--accent);" data-i18n="modal.importConfig">IMPORTAR CONFIG</h3><textarea id="importText" rows="10" style="background:#000; color:#fff; width:100%; font-family:monospace;"></textarea><br><br><button class="btn-large btn-primary" onclick="processImport()" data-i18n="button.processImport">PROCESSAR</button><button class="btn-large btn-sec" style="margin-top:5px;" onclick="document.getElementById('modalImport').style.display='none'" data-i18n="button.cancel">CANCELAR</button></div></div>
 
 <script src="shared/load-order.js"></script>
+<script src="shared/game-version.js"></script>
 <script>
         // --- INTEGRAÇÃO COM O ELECTRON ---
         // window.arsmm vem do preload.js; as chamadas devolvem { ok, data } ou { ok: false, code, error }.
@@ -427,6 +445,24 @@
                 'order.issues': 'mod(s) antes de uma dependência (recomendado: dependência primeiro)',
                 'order.ok': 'Dependências antes dos mods que as usam.',
                 'order.cycle': 'Dependência circular (não dá para ordenar):',
+                'gv.serverLabel': 'JOGO NO SERVIDOR',
+                'gv.serverTitle': 'Versão do jogo no servidor. O Monitor preenche sozinho (consulta A2S); dá para digitar à mão.',
+                'gv.game': 'jogo',
+                'gv.unknownShort': 'jogo ?',
+                'gv.modGame': 'Versão do jogo desta versão do mod:',
+                'gv.server': 'Servidor:',
+                'gv.missing': 'sem dado',
+                'gv.newerTitle': 'O mod foi publicado para uma versão do jogo mais nova que a do servidor. Ele pode não carregar até o servidor ser atualizado.',
+                'gv.olderShort': 'não atualizado desde a',
+                'gv.olderTitle': 'Aviso: o mod não é atualizado desde uma versão anterior do jogo. Muitos mods antigos (inclusive da Bohemia) continuam funcionando.',
+                'gv.sameTitle': 'Mesma versão do jogo (major.minor) que o servidor.',
+                'gv.unknownTitle': 'Falta a versão do jogo do mod ou a do servidor (preencha pelo Monitor ou à mão).',
+                'gv.loadingTitle': 'Buscando no changelog da Workshop a versão do jogo da versão fixada...',
+                'gv.summaryOlder': 'mod(s) possivelmente desatualizado(s)',
+                'gv.summaryNewer': 'mod(s) mais novo(s) que o servidor',
+                'gv.summaryObsolete': 'obsoleto(s)',
+                'gv.obsolete': 'OBSOLETO',
+                'gv.obsoleteTitle': 'O autor marcou este mod como obsoleto na Workshop.',
                 'rcon.title': 'RCON MANAGER',
                 'rcon.notEnabled': 'Recurso não ativado no JSON',
                 'rcon.install': 'INSTALAR RCON',
@@ -591,6 +627,24 @@
                 'order.issues': 'mod(s) placed before a dependency (recommended: dependency first)',
                 'order.ok': 'Dependencies come before the mods that use them.',
                 'order.cycle': 'Circular dependency (cannot be sorted):',
+                'gv.serverLabel': 'SERVER GAME',
+                'gv.serverTitle': 'Game version running on the server. The Monitor fills it in (A2S query); you can also type it.',
+                'gv.game': 'game',
+                'gv.unknownShort': 'game ?',
+                'gv.modGame': 'Game version of this mod version:',
+                'gv.server': 'Server:',
+                'gv.missing': 'no data',
+                'gv.newerTitle': 'The mod was published for a newer game version than the server. It may not load until the server is updated.',
+                'gv.olderShort': 'not updated since',
+                'gv.olderTitle': 'Warning: the mod has not been updated since an earlier game version. Many old mods (Bohemia ones included) keep working.',
+                'gv.sameTitle': 'Same game version (major.minor) as the server.',
+                'gv.unknownTitle': 'The mod or server game version is missing (fill it from the Monitor or by hand).',
+                'gv.loadingTitle': 'Looking up the pinned version\'s game version in the Workshop changelog...',
+                'gv.summaryOlder': 'mod(s) possibly outdated',
+                'gv.summaryNewer': 'mod(s) newer than the server',
+                'gv.summaryObsolete': 'obsolete',
+                'gv.obsolete': 'OBSOLETE',
+                'gv.obsoleteTitle': 'The author marked this mod as obsolete on the Workshop.',
                 'rcon.title': 'RCON MANAGER',
                 'rcon.notEnabled': 'Feature not enabled in JSON',
                 'rcon.install': 'INSTALL RCON',
@@ -803,6 +857,7 @@
             return {
                 modId: String(raw.modId || ''), name: String(raw.name || ''), version, autoUpdate: version === '', raw,
                 workshopName: '', latestVersion: '', sizeBytes: 0, image: '', dependencies: [],
+                gameVersion: '', versions: [], obsolete: false, olderGameVersions: {},
                 status: 'pending', pinOnFetch: false,
             };
         }
@@ -812,6 +867,7 @@
             return {
                 modId: id.toUpperCase(), name, version: '', autoUpdate: false, raw: {},
                 workshopName: '', latestVersion: '', sizeBytes: 0, image: '', dependencies: [],
+                gameVersion: '', versions: [], obsolete: false, olderGameVersions: {},
                 status: 'pending', pinOnFetch: true,
             };
         }
@@ -857,6 +913,9 @@
             mod.sizeBytes = Number(data.sizeBytes) || 0;
             mod.image = typeof data.image === 'string' && data.image.startsWith('https://') ? data.image : '';
             mod.dependencies = Array.isArray(data.dependencies) ? data.dependencies : [];
+            mod.gameVersion = String(data.gameVersion || '');
+            mod.versions = Array.isArray(data.versions) ? data.versions : [];
+            mod.obsolete = data.obsolete === true;
             if (mod.pinOnFetch && mod.latestVersion) mod.version = mod.latestVersion;
             mod.pinOnFetch = false;
             mod.status = 'ok';
@@ -1027,6 +1086,53 @@
             scheduleRender();
         }
 
+        // --- VERSÃO DO JOGO ---
+        // Compara só major.minor da versão do jogo da versão do mod que o servidor vai usar
+        // (a fixada, ou a mais recente com auto update) com a versão do jogo do servidor.
+        const gameVersions = window.ARSMM_GAME_VERSION;
+
+        // '' = sem dado; null = buscando no changelog (versão fixada fora das 10 últimas).
+        function modGameVersion(mod) {
+            if (mod.status !== 'ok') return '';
+            const pinned = globalAutoUpdate || mod.autoUpdate ? '' : mod.version;
+            const found = gameVersions.gameVersionForModVersion({ version: mod.latestVersion, gameVersion: mod.gameVersion, versions: mod.versions }, pinned);
+            if (found.listed) return found.gameVersion;
+            if (!Object.hasOwn(mod.olderGameVersions, pinned)) fetchOlderGameVersion(mod, pinned);
+            return mod.olderGameVersions[pinned];
+        }
+
+        async function fetchOlderGameVersion(mod, version) {
+            mod.olderGameVersions[version] = null;
+            try {
+                mod.olderGameVersions[version] = String((await api(bridge.workshop.getGameVersion(mod.modId, version))).gameVersion || '');
+            } catch (e) {
+                mod.olderGameVersions[version] = '';
+            }
+            scheduleRender();
+        }
+
+        function serverGameVersion() { return val('serverGameVersion').trim(); }
+
+        function renderGameVersionBadge(mod, gameVersion, state) {
+            const server = serverGameVersion();
+            if (gameVersion === null) return h('span', { class: 'gv-badge', title: t('gv.loadingTitle') }, '...');
+            const titles = { newer: 'gv.newerTitle', older: 'gv.olderTitle', same: 'gv.sameTitle', unknown: 'gv.unknownTitle' };
+            const title = `${t('gv.modGame')} ${gameVersion || t('gv.missing')}\n${t('gv.server')} ${server || t('gv.missing')}\n\n${t(titles[state])}`;
+            const modMM = gameVersions.majorMinor(gameVersion);
+            const text = state === 'older' ? `${t('gv.olderShort')} ${modMM}`
+                : state === 'unknown' ? (modMM ? `${t('gv.game')} ${modMM}` : t('gv.unknownShort'))
+                : `${t('gv.game')} ${modMM}`;
+            return h('span', { class: `gv-badge gv-${state}`, title }, text);
+        }
+
+        function renderGameVersionSummary(counts) {
+            const parts = [];
+            if (counts.newer) parts.push(`🔴 ${counts.newer} ${t('gv.summaryNewer')}`);
+            if (counts.older) parts.push(`🟡 ${counts.older} ${t('gv.summaryOlder')}`);
+            if (counts.obsolete) parts.push(`⛔ ${counts.obsolete} ${t('gv.summaryObsolete')}`);
+            $('gameVersionSummary').textContent = parts.join(' · ');
+        }
+
         // --- RENDERIZAÇÃO DA LISTA ---
         // Várias mudanças seguidas (ex.: 100 mods chegando da Workshop) viram um único render por frame.
         let renderQueued = false;
@@ -1052,14 +1158,20 @@
             renderOrderSummary(orderIssues, loadOrder.sortByDependencies(modList).cycles);
 
             const fragment = document.createDocumentFragment();
+            const gvCounts = { newer: 0, older: 0, obsolete: 0 };
             let visibleCount = 0;
             modList.forEach((mod, index) => {
+                const gameVersion = modGameVersion(mod);
+                const gvState = gameVersions.compareGameVersion(gameVersion, serverGameVersion());
+                if (gvState === 'newer' || gvState === 'older') gvCounts[gvState]++;
+                if (mod.obsolete) gvCounts.obsolete++;
                 const names = `${mod.name} ${mod.workshopName}`.toLowerCase();
                 if (term && !names.includes(term) && !mod.modId.toLowerCase().includes(term)) return;
                 visibleCount++;
-                fragment.appendChild(renderModItem(mod, index, orderIssues.get(mod.modId.toUpperCase()) || []));
+                fragment.appendChild(renderModItem(mod, index, orderIssues.get(mod.modId.toUpperCase()) || [], gameVersion, gvState));
             });
             list.replaceChildren(fragment);
+            renderGameVersionSummary(gvCounts);
 
             if (focusAfterRender) {
                 const { modId, dir } = focusAfterRender;
@@ -1078,7 +1190,7 @@
             updateJson();
         }
 
-        function renderModItem(mod, index, lateDeps) {
+        function renderModItem(mod, index, lateDeps, gameVersion, gvState) {
             const isAuto = globalAutoUpdate || mod.autoUpdate;
             const displayName = modDisplayName(mod) || `Mod ${mod.modId}`;
             const nameTitle = mod.workshopName && mod.workshopName !== displayName ? `${displayName} (Workshop: ${mod.workshopName})` : displayName;
@@ -1087,6 +1199,8 @@
                 isAuto
                     ? h('span', { style: 'color:#66bb6a; font-size:0.9em;' }, mod.latestVersion ? `(AUTO) v${mod.latestVersion}` : '(AUTO)')
                     : (mod.version ? `v${mod.version}` : 'v?'));
+            if (mod.status === 'ok') versionRow.append(renderGameVersionBadge(mod, gameVersion, gvState));
+            if (mod.obsolete) versionRow.append(h('span', { class: 'obsolete-badge', title: t('gv.obsoleteTitle') }, t('gv.obsolete')));
             if (!isAuto && mod.version && mod.latestVersion && mod.version !== mod.latestVersion) {
                 versionRow.append(h('button', {
                     class: 'mod-update-btn', title: t('mods.updateTitle'),
@@ -1296,6 +1410,7 @@
                     rconHost: val('rconConnectIp').trim(),
                     monitorHost: val('monHost').trim(),
                     monitorPort: clampInt(val('monPort'), 1, 65535, 17777),
+                    serverGameVersion: serverGameVersion(),
                 },
                 armaConfig,
             };
@@ -1494,6 +1609,11 @@
                 setText('monPlayers', `${info.players}/${info.maxPlayers}`);
                 setText('monMap', info.map);
                 setText('monVersion', info.version);
+                // A versão do A2S vira a versão do jogo do servidor (comparação dos mods), se parecer uma versão.
+                if (gameVersions.parseMajorMinor(info.version) && info.version !== serverGameVersion()) {
+                    setVal('serverGameVersion', String(info.version).slice(0, 32));
+                    scheduleRender();
+                }
                 setYesNo('monPass', info.password, 'var(--danger)');
                 setText('monPing', `${info.ping} ms`);
                 $('monError').textContent = '';
@@ -1620,6 +1740,7 @@
 
             profileMeta = isPlainObject(json.meta) ? json.meta : {};
             setVal('bmServerId', profileMeta.bmId || '');
+            setVal('serverGameVersion', typeof profileMeta.serverGameVersion === 'string' ? profileMeta.serverGameVersion : '');
             // IP de conexão do RCON: o salvo no perfil, senão o IP público, senão localhost.
             setVal('rconConnectIp', profileMeta.rconHost || json.armaConfig.publicAddress || '127.0.0.1');
             populateForm(json.armaConfig);

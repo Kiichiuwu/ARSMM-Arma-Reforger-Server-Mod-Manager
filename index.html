@@ -524,6 +524,10 @@
                 'sc.switchedNone': 'nenhum',
                 'sc.andMore': 'e mais {n}',
                 'sc.undo': 'Desfazer',
+                'sc.switchKept': 'Ficaram {n} mod(s) de mapa porque os dados de alguns mods da lista não carregaram (podem depender deles): {names}.',
+                'sc.swapHint': 'Com a troca ligada, os mods dos outros mapas salvos saem da lista.',
+                'sc.waitingMods': 'Esperando os dados dos mods para trocar o mapa com segurança...',
+                'sc.restoreMap': 'Colocar os mods do mapa',
                 'sc.modsFailed': 'Os dados de {n} mod(s) não carregaram da Workshop; a missão pode ser de um deles.',
                 'sc.retry': 'Tentar de novo',
                 'sc.fromMod': 'Mod:',
@@ -787,6 +791,10 @@
                 'sc.switchedNone': 'none',
                 'sc.andMore': 'and {n} more',
                 'sc.undo': 'Undo',
+                'sc.switchKept': '{n} map mod(s) stayed because the data of some listed mods did not load (they may depend on them): {names}.',
+                'sc.swapHint': 'With swapping on, the mods of the other saved maps leave the list.',
+                'sc.waitingMods': 'Waiting for the mods\' data to switch the map safely...',
+                'sc.restoreMap': 'Add the map\'s mods',
                 'sc.modsFailed': 'The data of {n} mod(s) did not load from the Workshop; the mission may belong to one of them.',
                 'sc.retry': 'Retry',
                 'sc.fromMod': 'Mod:',
@@ -1246,8 +1254,10 @@
             for (const dep of parent.dependencies) {
                 if (findMod(dep.id)) continue;
                 const at = modList.indexOf(parent);
-                const mod = newMod(dep.id, dep.name);
-                if (recursive) mod.addDepsOnFetch = true;
+                // Dependência que a troca de mapa acabou de tirar volta como era (mesma versão), não como mod novo.
+                const back = lastMapSwitch ? lastMapSwitch.removedMods.find(m => sameModId(m.modId, dep.id)) : null;
+                const mod = back || newMod(dep.id, dep.name);
+                if (recursive) { mod.addDepsOnFetch = !back; mod.autoDep = true; }
                 modList.splice(at < 0 ? modList.length : at, 0, mod);
             }
             scheduleRender();
@@ -1560,7 +1570,7 @@
         let pickerKey = '';            // o que o seletor desenhou da última vez (evita redesenhar à toa)
         let pickerReturnFocus = null;  // botão que abriu o seletor
         let lastMapSwitch = null;      // última troca de mapa: { removed, added, before, after } (para "Desfazer")
-        const removedFromLibrary = new Set(); // mapas que o usuário tirou da biblioteca nesta sessão (não voltam sozinhos)
+        const removedFromLibrary = new Set(); // mapas que o usuário tirou da biblioteca (meta.mapLibraryIgnored): não voltam sozinhos
 
         function tf(key, values) { return t(key).replace(/\{(\w+)\}/g, (m, k) => (values && k in values ? String(values[k]) : m)); }
 
@@ -1568,7 +1578,8 @@
         function libraryModsForIndex() {
             return mapLibrary
                 .filter(e => { const m = findMod(e.modId); return !(m && m.status === 'ok'); })
-                .map(e => ({ modId: e.modId, name: e.name, workshopName: '', scenarios: e.scenarios }));
+                // Missão com ID do jogo base (mod que substituía a missão) não vale fora da lista: senão escondia a original.
+                .map(e => ({ modId: e.modId, name: e.name, workshopName: '', scenarios: e.scenarios.filter(x => !scenarios.isBaseGameId(x.id)) }));
         }
 
         function scenarioIndex(extraMods = []) {
@@ -1580,35 +1591,62 @@
             return modList.map(m => ({ modId: m.modId, name: modDisplayName(m), dependencies: m.status === 'ok' ? m.dependencies : [] }));
         }
 
+        // Como o mod vai para a biblioteca: versão pelo estado do próprio mod (não pelo AUTO UPDATES global).
+        function libraryModRecord(mod) {
+            const out = { ...mod.raw, modId: mod.modId.toUpperCase() };
+            const name = modDisplayName(mod);
+            if (name) out.name = name; else delete out.name;
+            if (!mod.autoUpdate && mod.version) out.version = mod.version; else delete out.version;
+            return out;
+        }
+
         // Entrada da biblioteca a partir de um mod da lista: ele + dependências (em cadeia), com a versão atual.
+        // Se algum mod da cadeia está fora da lista ou sem dados, a cadeia pode estar incompleta: o que a entrada
+        // já tinha continua (nunca encolhe por falta de dado).
         function libraryEntryFromList(mod) {
             const id = mod.modId.toUpperCase();
             const prev = scenarios.findMapEntry(mapLibrary, id);
             const chain = scenarios.dependencyChain(id, modsForChain());
-            const mods = chain.map(c => {
-                const present = findMod(c.modId);
-                if (present) return exportMod(present);
-                const old = prev && prev.mods.find(x => x.modId === c.modId);
-                return old || (c.name ? { modId: c.modId, name: c.name } : { modId: c.modId });
+            const unknown = chain.some(c => { const p = findMod(c.modId); return !p || p.status !== 'ok'; });
+            const ids = chain.map(c => c.modId);
+            if (unknown && prev) {
+                const extra = prev.mods.map(m => m.modId).filter(x => !ids.includes(x));
+                ids.unshift(...extra); // o que só a entrada antiga conhecia são dependências: vão para o começo
+            }
+            const autoUpdate = [];
+            const mods = ids.map(modId => {
+                const present = findMod(modId);
+                if (present) {
+                    if (present.autoUpdate && !present.pinOnFetch) autoUpdate.push(modId);
+                    return libraryModRecord(present);
+                }
+                if (prev && prev.autoUpdate.includes(modId)) autoUpdate.push(modId);
+                const old = prev && prev.mods.find(x => x.modId === modId);
+                const c = chain.find(x => x.modId === modId);
+                return old || (c && c.name ? { modId, name: c.name } : { modId });
             });
             return {
-                modId: id, name: modDisplayName(mod) || id, mods, shared: prev ? prev.shared : [],
+                modId: id, name: modDisplayName(mod) || id, mods, autoUpdate, shared: prev ? prev.shared : [],
                 scenarios: (mod.scenarios || []).map(x => ({ id: x.id, name: x.name, gameMode: x.gameMode, playerCount: x.playerCount })),
             };
         }
 
         // Mantém a biblioteca em dia com a lista (dependências e versões) e salva o mapa da missão atual.
+        // Espera os mods da cadeia terminarem de carregar antes de reescrever uma entrada.
         function syncMapLibrary() {
             const current = scenarios.findScenario(scenarioIndex(), currentScenario);
-            const currentMod = current && current.source.type === 'mod' ? findMod(current.source.modId) : null;
+            const currentMod = current && current.source.type === 'mod' && !scenarios.isBaseGameId(currentScenario)
+                ? findMod(current.source.modId) : null;
             if (currentMod && currentMod.status === 'ok' && !scenarios.findMapEntry(mapLibrary, currentMod.modId)
                 && !removedFromLibrary.has(currentMod.modId.toUpperCase())) {
                 const next = scenarios.upsertMapEntry(mapLibrary, libraryEntryFromList(currentMod));
                 if (next) mapLibrary = next;
             }
+            const loading = new Set(modList.filter(m => m.status === 'pending' || m.status === 'loading').map(m => m.modId.toUpperCase()));
             for (const entry of mapLibrary) {
                 const mod = findMod(entry.modId);
                 if (!mod || mod.status !== 'ok') continue;
+                if (entry.mods.some(m => loading.has(m.modId))) continue;
                 const fresh = scenarios.normalizeMapLibrary([libraryEntryFromList(mod)])[0];
                 if (fresh && JSON.stringify(fresh) !== JSON.stringify(entry)) {
                     const next = scenarios.upsertMapEntry(mapLibrary, fresh);
@@ -1645,9 +1683,26 @@
 
         // Troca os mods de mapa: entram os do mapa targetId (salvos na biblioteca, com versão) e, se removeOthers,
         // saem os dos outros mapas da biblioteca (planMapSwitch decide o que pode sair).
+        // Mod que volta da biblioteca: com versão salva, volta fixado nela; marcado como auto update, volta assim;
+        // sem nenhum dos dois (mapa novo), é fixado na versão atual da Workshop, como todo mod adicionado pela tela.
+        function modFromLibrary(raw, entry) {
+            if (raw.version || (entry && entry.autoUpdate.includes(raw.modId))) return modFromConfig(raw);
+            const mod = newMod(raw.modId, typeof raw.name === 'string' ? raw.name : '');
+            const { modId, name, version, ...extra } = raw;
+            mod.raw = extra;
+            return mod;
+        }
+
+        // Insere antes do primeiro mod da lista que depende dele (ordem de carga), senão no fim.
+        function insertByDependency(mod) {
+            const at = modList.findIndex(m => (m.dependencies || []).some(d => sameModId(d.id, mod.modId)));
+            if (at < 0) modList.push(mod); else modList.splice(at, 0, mod);
+        }
+
         function switchMapMods(targetId, { removeOthers }) {
             const plan = scenarios.planMapSwitch({
-                mods: modList.map(m => ({ modId: m.modId, dependencies: m.status === 'ok' ? m.dependencies : [] })),
+                // Sem os dados da Workshop, as dependências de um mod são desconhecidas (null), não "nenhuma".
+                mods: modList.map(m => ({ modId: m.modId, dependencies: m.status === 'ok' ? m.dependencies : null })),
                 library: mapLibrary, targetId,
             });
             const removeIds = new Set(removeOthers ? plan.remove : []);
@@ -1656,25 +1711,29 @@
             const removed = modList.filter(m => removeIds.has(m.modId.toUpperCase()));
             for (const m of removed) m.addDepsOnFetch = false;
             modList = modList.filter(m => !removeIds.has(m.modId.toUpperCase()));
+            const entry = targetId ? scenarios.findMapEntry(mapLibrary, targetId) : null;
             const added = plan.add.map(raw => {
-                const mod = modFromConfig(raw);
+                const mod = modFromLibrary(raw, entry);
                 mod.addDepsOnFetch = true; // dependência nova que o mapa ganhou desde que foi salvo entra também
                 return mod;
             });
-            modList.push(...added);
+            // Dependências primeiro (o conjunto salvo já vem nessa ordem); cada uma antes de quem precisa dela.
+            for (const mod of added) insertByDependency(mod);
             const label = (m) => modDisplayName(m) || m.modId;
-            lastMapSwitch = { removed: removed.map(label), added: added.map(label), before, after: null };
+            const kept = removeOthers ? plan.unknownKept.map(id => { const m = findMod(id); return m ? label(m) : id; }) : [];
+            lastMapSwitch = { removed: removed.map(label), removedMods: removed, added: added.map(label), kept, before, after: null };
             if (added.length) refreshModMetadata();
             scheduleRender();
         }
 
         function undoMapSwitch() {
             if (!lastMapSwitch) return;
-            const { before } = lastMapSwitch;
+            const { before, after } = lastMapSwitch;
             lastMapSwitch = null;
             modList = before.modList;
             currentScenario = before.scenario;
-            setVal('confPlayers', before.players);
+            // MAX PLAYERS só volta se ninguém mexeu nele depois da troca.
+            if (!after || val('confPlayers') === after.players) setVal('confPlayers', before.players);
             refreshModMetadata();
             updateJson();
             scheduleRender();
@@ -1686,21 +1745,32 @@
             return names.length > 3 ? `${shown} ${tf('sc.andMore', { n: names.length - 3 })}` : shown;
         }
 
-        // "Desfazer" só vale enquanto nada mudou depois da troca (senão desfaria edições do usuário).
+        // "Desfazer" só vale enquanto nada mudou depois da troca (senão desfaria edições do usuário). Dependências
+        // que entraram sozinhas por causa da troca (autoDep) não contam como mudança.
         function mapSwitchStillUndoable() {
             if (!lastMapSwitch || !lastMapSwitch.after) return false;
-            return lastMapSwitch.after.scenario === currentScenario && modListShallowEqual(lastMapSwitch.after.modList, modList);
+            const after = lastMapSwitch.after.modList;
+            const relevant = modList.filter(m => !m.autoDep || after.includes(m));
+            return lastMapSwitch.after.scenario === currentScenario && modListShallowEqual(after, relevant);
         }
 
+        function isKeptMod(modId) { return mapLibrary.some(e => e.shared.includes(modId)); }
+
+        // "Manter sempre" é do mod, não do mapa: vale (e é desmarcado) em todos os mapas que o usam.
         function toggleMapShared(entry, modId, keep) {
-            const shared = keep ? [...entry.shared, modId] : entry.shared.filter(x => x !== modId);
-            const next = scenarios.upsertMapEntry(mapLibrary, { ...entry, shared });
-            if (next) mapLibrary = next;
+            let next = mapLibrary;
+            for (const e of mapLibrary) {
+                if (e.modId !== entry.modId && !e.mods.some(m => m.modId === modId) && !e.shared.includes(modId)) continue;
+                const shared = keep ? [...new Set([...e.shared, modId])] : e.shared.filter(x => x !== modId);
+                next = scenarios.upsertMapEntry(next, { ...e, shared }) || next;
+            }
+            mapLibrary = next;
             updateJson();
             renderScenarioPicker();
         }
 
         function removeLibraryEntry(entry) {
+            // (o mapa fica marcado como ignorado no perfil: não volta sozinho para a biblioteca)
             if (!confirm(tf('sc.libraryRemoveConfirm', { name: entry.name || entry.modId }))) return;
             mapLibrary = scenarios.removeMapEntry(mapLibrary, entry.modId);
             removedFromLibrary.add(entry.modId);
@@ -1747,6 +1817,11 @@
                 parts.push(h('div', { class: 'sc-name' }, entry.name));
                 parts.push(h('div', { class: 'sc-meta' }, scenarioMetaText(entry)));
                 parts.push(h('div', { class: 'sc-file', title: entry.id }, entry.file));
+                // Missão de um mapa salvo cujo mod saiu da lista: o config aponta para uma missão sem o mod.
+                if (entry.source.type === 'mod' && !findMod(entry.source.modId)) {
+                    parts.push(h('div', { class: 'sc-warn' }, `⚠ ${tf('sc.modMissing', { mod: entry.source.modName || entry.source.modId })}`,
+                        h('button', { class: 'sc-mini-btn', onclick: () => chooseScenario(entry) }, t('sc.restoreMap'))));
+                }
                 if (entry.players && maxPlayersValue() > entry.players) {
                     parts.push(h('div', { class: 'sc-warn' }, `⚠ ${tf('sc.playersAbove', { max: maxPlayersValue(), n: entry.players })}`,
                         h('button', { class: 'sc-mini-btn', onclick: () => { setVal('confPlayers', entry.players); updateJson(); renderScenarioCard(); } }, t('sc.adjust'))));
@@ -1771,10 +1846,16 @@
                 }
             }
             if (mapSwitchStillUndoable()) {
+                // O que saiu e voltou em seguida (dependência do mapa novo) não conta como "saiu".
+                const gone = lastMapSwitch.removedMods.filter(m => !modList.includes(m)).map(m => modDisplayName(m) || m.modId);
                 parts.push(h('div', { class: 'sc-switch' },
-                    `↔ ${tf('sc.switched', { removed: namesSummary(lastMapSwitch.removed), added: namesSummary(lastMapSwitch.added) })}`,
+                    `↔ ${tf('sc.switched', { removed: namesSummary(gone), added: namesSummary(lastMapSwitch.added) })}`,
                     h('button', { class: 'sc-mini-btn', onclick: undoMapSwitch }, t('sc.undo'))));
+                if (lastMapSwitch.kept.length) {
+                    parts.push(h('div', { class: 'sc-warn' }, `⚠ ${tf('sc.switchKept', { n: lastMapSwitch.kept.length, names: namesSummary(lastMapSwitch.kept) })}`));
+                }
             }
+            if (switchingMap) parts.push(h('div', { class: 'sc-meta' }, t('sc.waitingMods')));
             // O cartão é aria-live: só troca o conteúdo quando o texto muda, senão o leitor de tela repete tudo.
             const key = parts.map(n => n.textContent).join('\u0001');
             if (card.dataset.key !== key) {
@@ -1810,17 +1891,41 @@
 
         // Troca a missão. Missão de mod: o mapa vai para a biblioteca e os mods dele entram na lista; com a troca
         // ligada, os mods dos outros mapas da biblioteca saem. Missão do jogo base com a troca ligada: saem todos.
-        function chooseScenario(entry) {
+        let switchingMap = false;
+        async function chooseScenario(entry) {
+            if (switchingMap) return;
             const targetId = entry.source.type === 'mod' ? entry.source.modId : null;
+            // Para tirar mods com segurança é preciso saber de quem cada mod depende: espera (com limite) os dados
+            // da Workshop que ainda estão chegando. O que continuar desconhecido fica (planMapSwitch.unknownKept).
+            if (mapSwap && modsStillLoading()) {
+                switchingMap = true;
+                closeScenarioPicker();
+                renderScenarioCard();
+                try { await waitForModMetadata(8000); } finally { switchingMap = false; }
+            }
+            rememberOutgoingMap();
             if (targetId) rememberMap(entry);
             lastMapSwitch = null;
             if (targetId || mapSwap) switchMapMods(targetId, { removeOthers: mapSwap });
             if (targetId && !findMod(targetId)) addScenarioMod(targetId, entry.source.modName);
             applyScenario(entry.id, entry);
             if (lastMapSwitch) {
-                lastMapSwitch.after = { modList: modList.slice(), scenario: currentScenario };
-                renderScenarioCard();
+                lastMapSwitch.after = { modList: modList.slice(), scenario: currentScenario, players: val('confPlayers') };
             }
+            renderScenarioCard();
+        }
+
+        // O mapa da missão que está saindo também vai para a biblioteca (se ainda não está), mesmo sem os dados
+        // da Workshop: senão os mods dele nunca sairiam do config.
+        function rememberOutgoingMap() {
+            if (!currentScenario || scenarios.isBaseGameId(currentScenario)) return;
+            const entry = scenarios.findScenario(scenarioIndex(), currentScenario);
+            const recent = scenarioRecent.find(r => scenarios.sameScenarioId(r.id, currentScenario));
+            const modId = entry && entry.source.type === 'mod' ? entry.source.modId : (recent && recent.modId) || '';
+            const mod = modId ? findMod(modId) : null;
+            if (!mod || scenarios.findMapEntry(mapLibrary, modId) || removedFromLibrary.has(modId.toUpperCase())) return;
+            const next = scenarios.upsertMapEntry(mapLibrary, libraryEntryFromList(mod));
+            if (next) mapLibrary = next;
         }
 
         function applyScenario(id, entry) {
@@ -1839,9 +1944,15 @@
         function useRecentScenario(recent) {
             const entry = scenarios.findScenario(scenarioIndex(), recent.id);
             if (entry) { chooseScenario(entry); return; }
-            if (recent.modId && !findMod(recent.modId)) addScenarioMod(recent.modId, recent.modName);
+            // Missão de um mod que não está nem na lista nem na biblioteca: passa pela mesma troca de mapa.
+            if (recent.modId) {
+                chooseScenario({
+                    id: recent.id, name: recent.name || scenarios.scenarioFileName(recent.id), modeLabel: '', players: null,
+                    source: { type: 'mod', modId: recent.modId, modName: recent.modName || recent.modId },
+                });
+                return;
+            }
             applyScenario(recent.id, null);
-            // Mantém nome e mod do histórico enquanto os dados do mod não chegam.
             scenarioRecent = scenarios.pushRecent(scenarioRecent, recent);
             renderScenarioCard();
         }
@@ -1911,7 +2022,7 @@
             return JSON.stringify([
                 getAppLanguage(), scenarioGroup, val('scSearch').trim(), currentScenario,
                 modList.map(m => [m.modId, m.status, m.status === 'ok' ? (m.scenarios || []).length : 0, modDisplayName(m)]),
-                scenarioPresets, previewMod, presetMessage, mapLibrary, mapSwap,
+                scenarioPresets, previewMod, presetMessage, mapLibrary, mapSwap, switchingMap,
             ]);
         }
 
@@ -1931,7 +2042,7 @@
             swap.checked = mapSwap;
             nodes.push(h('label', { class: 'sc-toggle', title: t('sc.swapTitle') }, swap, h('span', {}, t('sc.swapToggle'))));
             const current = scenarios.findScenario(index, currentScenario);
-            const activeMap = current && current.source.type === 'mod' ? current.source.modId : '';
+            const activeMap = current && current.source.type === 'mod' && findMod(current.source.modId) ? current.source.modId : '';
             for (const entry of mapLibrary) {
                 const group = `mod:${entry.modId}`;
                 const inList = !!findMod(entry.modId);
@@ -2009,8 +2120,11 @@
                 if (isRoot) {
                     chip.append(h('span', { style: 'color:#888;' }, `(${t('sc.libraryRoot')})`));
                 } else {
-                    const box = h('input', { type: 'checkbox', 'data-focus-key': `shared:${entry.modId}:${m.modId}`, onchange: (e) => toggleMapShared(entry, m.modId, e.target.checked) });
-                    box.checked = entry.shared.includes(m.modId);
+                    const box = h('input', {
+                        type: 'checkbox', 'aria-label': `${t('sc.libraryShared')}: ${name}`,
+                        'data-focus-key': `shared:${entry.modId}:${m.modId}`, onchange: (e) => toggleMapShared(entry, m.modId, e.target.checked),
+                    });
+                    box.checked = isKeptMod(m.modId);
                     chip.append(h('label', { title: t('sc.librarySharedTitle') }, box, t('sc.libraryShared')));
                 }
                 return chip;
@@ -2028,13 +2142,15 @@
             const isCurrent = scenarios.sameScenarioId(entry.id, currentScenario);
             const needsMod = entry.source.type === 'mod' && !findMod(entry.source.modId);
             const libEntry = entry.source.type === 'mod' ? scenarios.findMapEntry(mapLibrary, entry.source.modId) : null;
+            const baseTitle = needsMod ? (libEntry ? tf('sc.useLibraryTitle', { n: libEntry.mods.length }) : t('sc.addAndUseTitle')) : '';
             const button = h('button', {
                 class: 'btn-install-all',
-                title: needsMod ? (libEntry ? tf('sc.useLibraryTitle', { n: libEntry.mods.length }) : t('sc.addAndUseTitle')) : '',
+                title: [baseTitle, mapSwap && mapLibrary.length ? t('sc.swapHint') : ''].filter(Boolean).join(' '),
                 'data-focus-key': `use:${entry.id}`,
                 onclick: () => chooseScenario(entry),
-            }, isCurrent ? t('sc.current') : needsMod && !libEntry ? t('sc.addAndUse') : t('sc.use'));
-            button.disabled = isCurrent;
+            }, isCurrent && !needsMod ? t('sc.current') : needsMod && !libEntry ? t('sc.addAndUse') : t('sc.use'));
+            // A missão atual com o mod do mapa fora da lista continua clicável: é o jeito de pôr os mods de volta.
+            button.disabled = isCurrent && !needsMod;
             return h('div', { class: 'sc-row' + (isCurrent ? ' current' : '') },
                 entry.image ? h('img', { class: 'sc-thumb', src: entry.image, alt: '', loading: 'lazy' }) : null,
                 h('div', { class: 'sc-row-info' },
@@ -2304,6 +2420,7 @@
                     scenarioPresets: scenarioPresets,
                     mapLibrary: mapLibrary,
                     mapSwap: mapSwap,
+                    mapLibraryIgnored: [...removedFromLibrary],
                 },
                 armaConfig,
             };
@@ -2787,6 +2904,9 @@
             mapSwap = profileMeta.mapSwap !== false;
             lastMapSwitch = null;
             removedFromLibrary.clear();
+            for (const id of Array.isArray(profileMeta.mapLibraryIgnored) ? profileMeta.mapLibraryIgnored : []) {
+                if (/^[0-9A-Fa-f]{16}$/.test(String(id))) removedFromLibrary.add(String(id).toUpperCase());
+            }
             // IP de conexão do RCON: o salvo no perfil, senão o IP público, senão localhost.
             setVal('rconConnectIp', profileMeta.rconHost || json.armaConfig.publicAddress || '127.0.0.1');
             populateForm(json.armaConfig);

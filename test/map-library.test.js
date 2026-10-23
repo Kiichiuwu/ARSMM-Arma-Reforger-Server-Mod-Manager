@@ -15,7 +15,7 @@ const LIBRARY = [
     { modId: BAK, name: 'Bakhmut', mods: [{ modId: RHS }, { modId: BAK_TERRAIN }, { modId: BAK }], scenarios: [{ id: '{2222222222222222}Missions/Bak.conf', name: 'Bakhmut' }] },
 ];
 
-test('normalizeMapLibrary: mapa sempre no conjunto (por último), shared só com mods do conjunto, sem repetidos', () => {
+test('normalizeMapLibrary: mapa sempre no conjunto (por último), shared e autoUpdate limpos, sem repetidos', () => {
     const lib = sc.normalizeMapLibrary([
         { modId: GOG.toLowerCase(), name: 'Gogland', mods: [{ modId: GOG }, { modId: RHS }, { modId: 'ruim' }], shared: [RHS.toLowerCase(), SAT, GOG], scenarios: [{ id: 'ruim' }, { id: '{1111111111111111}Missions/Gog.conf', name: 'G', playerCount: 0 }] },
         { modId: GOG, name: 'repetido' },
@@ -25,9 +25,12 @@ test('normalizeMapLibrary: mapa sempre no conjunto (por último), shared só com
     ]);
     assert.strictEqual(lib.length, 2);
     assert.deepStrictEqual(lib[0].mods.map(m => m.modId), [RHS, GOG]);
-    assert.deepStrictEqual(lib[0].shared, [RHS]); // SAT não está no conjunto; o próprio mapa nunca é "compartilhado"
+    // A marca "manter sempre" sobrevive mesmo para mod fora do conjunto atual; o próprio mapa nunca é "compartilhado".
+    assert.deepStrictEqual(lib[0].shared, [RHS, SAT]);
     assert.deepStrictEqual(lib[0].scenarios, [{ id: '{1111111111111111}Missions/Gog.conf', name: 'G', gameMode: '', playerCount: null }]);
     assert.deepStrictEqual(lib[1].mods, [{ modId: BAK }]);
+    assert.deepStrictEqual(lib[1].autoUpdate, []);
+    assert.deepStrictEqual(sc.normalizeMapLibrary([{ modId: BAK, mods: [{ modId: RHS }], autoUpdate: [RHS.toLowerCase(), SAT] }])[0].autoUpdate, [RHS]);
     assert.deepStrictEqual(sc.normalizeMapLibrary('lixo'), []);
 });
 
@@ -94,5 +97,31 @@ test('mapa novo que ainda não está na biblioteca: só o próprio mapa conta co
     assert.deepStrictEqual(plan.remove, [GOG_TERRAIN, GOG]);
     assert.deepStrictEqual(plan.add, []);
     // Biblioteca vazia: nada sai.
-    assert.deepStrictEqual(sc.planMapSwitch({ mods: list, library: [], targetId: null }), { remove: [], add: [] });
+    assert.deepStrictEqual(sc.planMapSwitch({ mods: list, library: [], targetId: null }), { remove: [], add: [], unknownKept: [] });
+});
+
+test('mod que fica com dependências desconhecidas: só os mapas saem, as dependências deles ficam', () => {
+    // USES_RHS ainda carregando (ou falhou): pode precisar do RHS ou do terreno.
+    const list = [{ modId: USES_RHS, dependencies: null }, mod(RHS), mod(GOG_TERRAIN, RHS), mod(GOG, GOG_TERRAIN)];
+    const plan = sc.planMapSwitch({ mods: list, library: LIBRARY, targetId: BAK });
+    assert.deepStrictEqual(plan.remove, [GOG]);
+    assert.deepStrictEqual(plan.unknownKept.sort(), [GOG_TERRAIN].sort()); // RHS fica porque o Bakhmut também usa
+    // Mapa de saída com dados desconhecidos não segura nada (ele mesmo está saindo).
+    const leaving = [mod(RHS), mod(GOG_TERRAIN, RHS), { modId: GOG, dependencies: null }];
+    assert.deepStrictEqual(sc.planMapSwitch({ mods: leaving, library: LIBRARY, targetId: null }).remove, [RHS, GOG_TERRAIN, GOG]);
+});
+
+test('o que o mapa novo usa indiretamente (dependência da dependência) não sai', () => {
+    // NOVO ainda não está salvo com a cadeia completa: só [NOVO_T, NOVO]. NOVO_T depende do RHS.
+    const NOVO = 'F0F0F0F0F0F0F0F1', NOVO_T = 'F0F0F0F0F0F0F0F2';
+    const lib = [...LIBRARY, { modId: NOVO, mods: [{ modId: NOVO_T }, { modId: NOVO }] }];
+    const list = [mod(RHS), mod(GOG_TERRAIN, RHS), mod(GOG, GOG_TERRAIN), mod(NOVO_T, RHS), mod(NOVO, NOVO_T)];
+    const plan = sc.planMapSwitch({ mods: list, library: lib, targetId: NOVO });
+    assert.deepStrictEqual(plan.remove, [GOG_TERRAIN, GOG]);
+});
+
+test('isBaseGameId reconhece as missões do jogo base sem diferenciar maiúsculas', () => {
+    assert.ok(sc.isBaseGameId('{ecc61978edcc2b5a}missions/23_campaign.conf'));
+    assert.ok(!sc.isBaseGameId('{1111111111111111}Missions/Gog.conf'));
+    assert.ok(!sc.isBaseGameId(''));
 });

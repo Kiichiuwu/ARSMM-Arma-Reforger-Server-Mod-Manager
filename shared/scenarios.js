@@ -297,7 +297,12 @@
     // --- Biblioteca de mapas ---
     // Cada entrada é um mod que publica missões (o "mapa"), as missões dele e os mods que vão junto com ele
     // (ele mesmo e as dependências, em ordem de carga). shared = mods que também servem a outras coisas
-    // (ex.: um pacote de conteúdo) e por isso nunca saem da lista quando o mapa é trocado.
+    // (ex.: um pacote de conteúdo) e por isso nunca saem da lista quando o mapa é trocado. autoUpdate = mods
+    // que estavam em atualização automática (sem versão de propósito); os outros sem versão são fixados na
+    // versão atual da Workshop quando voltam para a lista.
+    const BASE_GAME_IDS = new Set(BASE_GAME.map(e => e.id.toLowerCase()));
+    function isBaseGameId(id) { return BASE_GAME_IDS.has(normalizeScenarioId(id).toLowerCase()); }
+    const cleanIds = (list) => [...new Set((Array.isArray(list) ? list : []).map(x => String(x || '').toUpperCase()))].filter(id => MOD_ID_RE.test(id));
     function normalizeLibraryScenarios(list) {
         const out = [];
         for (const raw of Array.isArray(list) ? list : []) {
@@ -326,9 +331,11 @@
             const root = mods.find(m => m.modId === modId) || { modId };
             mods = [...mods.filter(m => m.modId !== modId), root];
             const ids = new Set(mods.map(m => m.modId));
-            const shared = [...new Set((Array.isArray(raw.shared) ? raw.shared : []).map(x => String(x || '').toUpperCase()))]
-                .filter(id => ids.has(id) && id !== modId);
-            out.push({ modId, name: String(raw.name || '').slice(0, 120), mods, shared, scenarios: normalizeLibraryScenarios(raw.scenarios) });
+            // "Manter sempre" vale mesmo se o mod saiu do conjunto por um tempo (dados ainda carregando):
+            // a marca do usuário não pode sumir por causa disso.
+            const shared = cleanIds(raw.shared).filter(id => id !== modId).slice(0, MAX_PRESET_MODS);
+            const autoUpdate = cleanIds(raw.autoUpdate).filter(id => ids.has(id));
+            out.push({ modId, name: String(raw.name || '').slice(0, 120), mods, shared, autoUpdate, scenarios: normalizeLibraryScenarios(raw.scenarios) });
             if (out.length >= MAX_LIBRARY) break;
         }
         return out;
@@ -377,38 +384,53 @@
     }
 
     // Plano para usar uma missão do mapa targetId (null = jogo base): quais mods saem e quais entram.
-    // Só saem mods que pertencem a algum mapa da biblioteca, que o mapa novo não usa, que ninguém marcou como
-    // "manter sempre" e de que nenhum mod que fica na lista depende. Mods fora da biblioteca nunca são tocados.
+    // Só saem mods que pertencem a algum mapa da biblioteca, que o mapa novo não usa (nem direta nem
+    // indiretamente), que ninguém marcou como "manter sempre" e de que nenhum mod que fica na lista depende.
+    // Mods fora da biblioteca nunca são tocados.
+    // mods[i].dependencies: as dependências diretas conhecidas, ou null quando não se sabe (dados da Workshop
+    // ainda não chegaram ou falharam). Com algum mod que fica de dependências desconhecidas, só os mapas em si
+    // saem; as dependências deles ficam (unknownKept), porque podem ser justamente o que esse mod usa.
     function planMapSwitch({ mods, library, targetId }) {
         const list = Array.isArray(mods) ? mods : [];
         const lib = normalizeMapLibrary(library);
-        const present = new Map(list.map(m => [String(m.modId).toUpperCase(), m]));
+        const upper = (id) => String(id || '').toUpperCase();
+        const present = new Map(list.map(m => [upper(m.modId), m]));
+        const depsOf = (m) => (m && Array.isArray(m.dependencies) ? m.dependencies : []).map(d => upper(d && d.id));
         const target = targetId ? findMapEntry(lib, targetId) : null;
-        const targetIds = new Set(target ? target.mods.map(m => m.modId) : (targetId ? [String(targetId).toUpperCase()] : []));
+        // Tudo de que o mapa novo precisa: o conjunto salvo mais as dependências conhecidas desses mods.
+        const targetIds = new Set(target ? target.mods.map(m => m.modId) : (targetId ? [upper(targetId)] : []));
+        for (const queue = [...targetIds]; queue.length;) {
+            const id = queue.shift();
+            for (const dep of depsOf(present.get(id))) if (MOD_ID_RE.test(dep) && !targetIds.has(dep)) { targetIds.add(dep); queue.push(dep); }
+        }
         const shared = new Set(lib.flatMap(e => e.shared));
+        const roots = new Set(lib.map(e => e.modId));
         const remove = new Set();
         for (const entry of lib) {
             for (const m of entry.mods) {
                 if (present.has(m.modId) && !targetIds.has(m.modId) && !shared.has(m.modId)) remove.add(m.modId);
             }
         }
-        const depsOf = (m) => (Array.isArray(m.dependencies) ? m.dependencies : []).map(d => String((d && d.id) || '').toUpperCase());
+        const unknownKept = [];
         for (let changed = true; changed;) {
             changed = false;
+            const staying = list.filter(m => !remove.has(upper(m.modId)));
+            const unknown = staying.some(m => m.dependencies === null || m.dependencies === undefined);
             for (const id of [...remove]) {
-                const neededBy = list.some(m => !remove.has(String(m.modId).toUpperCase()) && depsOf(m).includes(id));
-                if (neededBy) { remove.delete(id); changed = true; }
+                if (staying.some(m => depsOf(m).includes(id))) { remove.delete(id); changed = true; }
+                else if (unknown && !roots.has(id)) { remove.delete(id); unknownKept.push(id); changed = true; }
             }
         }
         const add = target ? target.mods.filter(m => !present.has(m.modId)) : [];
         return {
-            remove: list.map(m => String(m.modId).toUpperCase()).filter(id => remove.has(id)),
+            remove: list.map(m => upper(m.modId)).filter(id => remove.has(id)),
             add,
+            unknownKept: [...new Set(unknownKept)],
         };
     }
 
     return {
-        normalizeMapLibrary, findMapEntry, upsertMapEntry, removeMapEntry, dependencyChain, planMapSwitch, MAX_LIBRARY,
+        normalizeMapLibrary, findMapEntry, upsertMapEntry, removeMapEntry, dependencyChain, planMapSwitch, MAX_LIBRARY, isBaseGameId,
         BASE_GAME, MAPS, GROUPS, MAX_RECENT, MAX_PRESETS, mapLabel, groupLabel, modeLabel,
         isValidScenarioId, normalizeScenarioId, sameScenarioId, scenarioFileName, resolveText,
         modScenarioEntries, buildScenarioIndex, findScenario, searchScenarios,

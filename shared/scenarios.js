@@ -2,7 +2,8 @@
 // predefinições (missão + lista de mods). Usado pela interface e pelos testes.
 //
 // O catálogo do jogo base foi extraído dos dados do Arma Reforger instalado (addons/data, outubro de 2026):
-// GUID e caminho do resourceDatabase.rdb, mapa/jogadores do cabeçalho de cada Missions/*.conf e nomes das
+// GUID e caminho do resourceDatabase.rdb, jogadores do cabeçalho de cada Missions/*.conf, terreno seguindo a
+// cadeia de SubScene do mundo da missão até Eden.ent (Everon), Arland.ent ou Cain.ent (Kolguyev), e nomes das
 // tabelas de tradução do próprio jogo. Variantes com o mesmo nome oficial ganham o sufixo do nome do arquivo.
 (function (root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -14,7 +15,27 @@
     const MAX_PRESET_NAME = 60;
     const MAX_PRESET_MODS = 500;
 
-    const MAPS = ['everon', 'arland', 'kolguyev', 'cah', 'other'];
+    // map = terreno onde a missão roda. group = aba do seletor: o terreno, ou "other" para missões de um
+    // jogador e de teste (ficam separadas para não poluir as listas de servidor).
+    const MAPS = ['everon', 'arland', 'kolguyev', 'other'];
+    const GROUPS = ['everon', 'arland', 'kolguyev', 'other'];
+
+    const MAP_LABELS = {
+        everon: { 'pt-BR': 'Everon', 'en-US': 'Everon' },
+        arland: { 'pt-BR': 'Arland', 'en-US': 'Arland' },
+        kolguyev: { 'pt-BR': 'Kolguyev', 'en-US': 'Kolguyev' },
+        other: { 'pt-BR': 'Mundo de teste', 'en-US': 'Test world' },
+    };
+    const GROUP_LABELS = { ...MAP_LABELS, other: { 'pt-BR': 'Um jogador e testes', 'en-US': 'Singleplayer and tests' } };
+    const MODE_LABELS = {
+        conflict: { 'pt-BR': 'Conflict', 'en-US': 'Conflict' },
+        'conflict-hqc': { 'pt-BR': 'Conflict: Comandante do QG', 'en-US': 'Conflict: HQ Commander' },
+        gamemaster: { 'pt-BR': 'Game Master', 'en-US': 'Game Master' },
+        combatops: { 'pt-BR': 'Combat Ops', 'en-US': 'Combat Ops' },
+        captureandhold: { 'pt-BR': 'Capture & Hold', 'en-US': 'Capture & Hold' },
+        singleplayer: { 'pt-BR': 'Um jogador', 'en-US': 'Singleplayer' },
+        test: { 'pt-BR': 'Teste', 'en-US': 'Test' },
+    };
 
     const BASE_GAME = [
         // Everon
@@ -39,25 +60,26 @@
         { id: '{BB5345C22DD2B655}Missions/23_Campaign_HQC_Cain.conf', map: 'kolguyev', mode: 'conflict-hqc', players: 64, name: { 'pt-BR': 'Conflict: Comandante do QG - Kolguyev', 'en-US': 'Conflict: HQ Commander - Kolguyev' } },
         { id: '{F45C6C15D31252E6}Missions/27_GM_Cain.conf', map: 'kolguyev', mode: 'gamemaster', players: 64, name: { 'pt-BR': 'Game Master - Kolguyev', 'en-US': 'Game Master - Kolguyev' } },
         { id: '{CB347F2F10065C9C}Missions/CombatOpsCain.conf', map: 'kolguyev', mode: 'combatops', players: 12, name: { 'pt-BR': 'Combat Ops - Kolguyev', 'en-US': 'Combat Ops - Kolguyev' } },
-        // Capture & Hold (mundos próprios, pequenos)
-        { id: '{3F2E005F43DBD2F8}Missions/CAH_Briars_Coast.conf', map: 'cah', mode: 'captureandhold', players: 64, name: { 'pt-BR': 'Capture & Hold - Os Espinheiros', 'en-US': 'Capture & Hold - Briars' } },
-        { id: '{F1A1BEA67132113E}Missions/CAH_Castle.conf', map: 'cah', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Castelo de Montfort', 'en-US': 'Capture & Hold - Montfort Castle' } },
-        { id: '{589945FB9FA7B97D}Missions/CAH_Concrete_Plant.conf', map: 'cah', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Usina de Concreto', 'en-US': 'Capture & Hold - Concrete Plant' } },
-        { id: '{9405201CBD22A30C}Missions/CAH_Factory.conf', map: 'cah', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Fábrica Almara', 'en-US': 'Capture & Hold - Almara Factory' } },
-        { id: '{465564323DED44EC}Missions/CAH_Factory - FIA.conf', map: 'cah', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Fábrica Almara (FIA)', 'en-US': 'Capture & Hold - Almara Factory (FIA)' } },
-        { id: '{1CD06B409C6FAE56}Missions/CAH_Forest.conf', map: 'cah', mode: 'captureandhold', players: 32, name: { 'pt-BR': 'Capture & Hold - Bosque de Simon', 'en-US': "Capture & Hold - Simon's Wood" } },
-        { id: '{654ADBC0BBB7DFBF}Missions/CAH_Forest - FIA.conf', map: 'cah', mode: 'captureandhold', players: 32, name: { 'pt-BR': 'Capture & Hold - Bosque de Simon (FIA)', 'en-US': "Capture & Hold - Simon's Wood (FIA)" } },
-        { id: '{7C491B1FCC0FF0E1}Missions/CAH_LeMoule.conf', map: 'cah', mode: 'captureandhold', players: 32, name: { 'pt-BR': 'Capture & Hold - Le Moule', 'en-US': 'Capture & Hold - Le Moule' } },
-        { id: '{6EA2E454519E5869}Missions/CAH_Military_Base.conf', map: 'cah', mode: 'captureandhold', players: 32, name: { 'pt-BR': 'Capture & Hold - Campo Blake', 'en-US': 'Capture & Hold - Camp Blake' } },
-        { id: '{2B4183DF23E88249}Missions/CAH_Morton.conf', map: 'cah', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Morton', 'en-US': 'Capture & Hold - Morton' } },
-        // Um jogador e testes (feitos para jogar sozinho; o arquivo não informa limite de jogadores)
-        { id: '{10B8582BAD9F7040}Missions/Scenario01_Intro.conf', map: 'other', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 01: além das colinas e bem distante', 'en-US': 'Omega 01: Over The Hills And Far Away' } },
-        { id: '{1D76AF6DC4DF0577}Missions/Scenario02_Steal.conf', map: 'other', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 02: checagem de rádio', 'en-US': 'Omega 02: Radio Check' } },
-        { id: '{D1647575BCEA5A05}Missions/Scenario03_Villa.conf', map: 'other', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 03: luz no escuro', 'en-US': 'Omega 03: Light In The Dark' } },
-        { id: '{6D224A109B973DD8}Missions/Scenario04_Sabotage.conf', map: 'other', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 04: silêncio vermelho', 'en-US': 'Omega 04: Red Silence' } },
-        { id: '{FA2AB0181129CB16}Missions/Scenario05_Hill.conf', map: 'other', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 05: suspense', 'en-US': 'Omega 05: Cliffhanger' } },
-        { id: '{C47A1A6245A13B26}Missions/SP01_ReginaV2.conf', map: 'other', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Eliminação', 'en-US': 'Elimination' } },
-        { id: '{0648CDB32D6B02B3}Missions/SP02_AirSupport.conf', map: 'other', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Suporte aéreo', 'en-US': 'Air Support' } },
+        // Capture & Hold: cada mundo é subcena de CAH_BaseWorld.ent, que é subcena de Eden.ent (Everon)
+        { id: '{3F2E005F43DBD2F8}Missions/CAH_Briars_Coast.conf', map: 'everon', mode: 'captureandhold', players: 64, name: { 'pt-BR': 'Capture & Hold - Os Espinheiros', 'en-US': 'Capture & Hold - Briars' } },
+        { id: '{F1A1BEA67132113E}Missions/CAH_Castle.conf', map: 'everon', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Castelo de Montfort', 'en-US': 'Capture & Hold - Montfort Castle' } },
+        { id: '{589945FB9FA7B97D}Missions/CAH_Concrete_Plant.conf', map: 'everon', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Usina de Concreto', 'en-US': 'Capture & Hold - Concrete Plant' } },
+        { id: '{9405201CBD22A30C}Missions/CAH_Factory.conf', map: 'everon', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Fábrica Almara', 'en-US': 'Capture & Hold - Almara Factory' } },
+        { id: '{465564323DED44EC}Missions/CAH_Factory - FIA.conf', map: 'everon', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Fábrica Almara (FIA)', 'en-US': 'Capture & Hold - Almara Factory (FIA)' } },
+        { id: '{1CD06B409C6FAE56}Missions/CAH_Forest.conf', map: 'everon', mode: 'captureandhold', players: 32, name: { 'pt-BR': 'Capture & Hold - Bosque de Simon', 'en-US': "Capture & Hold - Simon's Wood" } },
+        { id: '{654ADBC0BBB7DFBF}Missions/CAH_Forest - FIA.conf', map: 'everon', mode: 'captureandhold', players: 32, name: { 'pt-BR': 'Capture & Hold - Bosque de Simon (FIA)', 'en-US': "Capture & Hold - Simon's Wood (FIA)" } },
+        { id: '{7C491B1FCC0FF0E1}Missions/CAH_LeMoule.conf', map: 'everon', mode: 'captureandhold', players: 32, name: { 'pt-BR': 'Capture & Hold - Le Moule', 'en-US': 'Capture & Hold - Le Moule' } },
+        { id: '{6EA2E454519E5869}Missions/CAH_Military_Base.conf', map: 'everon', mode: 'captureandhold', players: 32, name: { 'pt-BR': 'Capture & Hold - Campo Blake', 'en-US': 'Capture & Hold - Camp Blake' } },
+        { id: '{2B4183DF23E88249}Missions/CAH_Morton.conf', map: 'everon', mode: 'captureandhold', players: 24, name: { 'pt-BR': 'Capture & Hold - Morton', 'en-US': 'Capture & Hold - Morton' } },
+        // Um jogador e testes (feitos para jogar sozinho; o arquivo não informa limite de jogadores).
+        // Ômega 01-05 rodam em Kolguyev (via SharedMilitaryPresence.ent); Eliminação e Suporte aéreo, em Everon.
+        { id: '{10B8582BAD9F7040}Missions/Scenario01_Intro.conf', map: 'kolguyev', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 01: além das colinas e bem distante', 'en-US': 'Omega 01: Over The Hills And Far Away' } },
+        { id: '{1D76AF6DC4DF0577}Missions/Scenario02_Steal.conf', map: 'kolguyev', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 02: checagem de rádio', 'en-US': 'Omega 02: Radio Check' } },
+        { id: '{D1647575BCEA5A05}Missions/Scenario03_Villa.conf', map: 'kolguyev', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 03: luz no escuro', 'en-US': 'Omega 03: Light In The Dark' } },
+        { id: '{6D224A109B973DD8}Missions/Scenario04_Sabotage.conf', map: 'kolguyev', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 04: silêncio vermelho', 'en-US': 'Omega 04: Red Silence' } },
+        { id: '{FA2AB0181129CB16}Missions/Scenario05_Hill.conf', map: 'kolguyev', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Ômega 05: suspense', 'en-US': 'Omega 05: Cliffhanger' } },
+        { id: '{C47A1A6245A13B26}Missions/SP01_ReginaV2.conf', map: 'everon', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Eliminação', 'en-US': 'Elimination' } },
+        { id: '{0648CDB32D6B02B3}Missions/SP02_AirSupport.conf', map: 'everon', mode: 'singleplayer', players: null, name: { 'pt-BR': 'Suporte aéreo', 'en-US': 'Air Support' } },
         { id: '{83D06A42096F671C}Missions/MpTest/10_MpTest.conf', map: 'other', mode: 'test', players: 4, name: { 'pt-BR': 'Multiplayer Test', 'en-US': 'Multiplayer Test' } },
     ];
 
@@ -105,10 +127,15 @@
         }).trim();
     }
 
+    function mapLabel(map, lang) { return MAP_LABELS[map] ? MAP_LABELS[map][langOf(lang)] : ''; }
+    function groupLabel(group, lang) { return GROUP_LABELS[group] ? GROUP_LABELS[group][langOf(lang)] : ''; }
+    function modeLabel(mode, lang) { return MODE_LABELS[mode] ? MODE_LABELS[mode][langOf(lang)] : ''; }
+
     function baseGameEntry(entry, lang) {
         return {
             id: entry.id, name: entry.name[langOf(lang)], file: scenarioFileName(entry.id),
-            group: entry.map, mode: entry.mode, modeLabel: '', players: entry.players,
+            map: entry.map, group: entry.mode === 'singleplayer' || entry.mode === 'test' ? 'other' : entry.map,
+            mode: entry.mode, modeLabel: modeLabel(entry.mode, lang), players: entry.players,
             description: '', image: '', source: { type: 'game' },
         };
     }
@@ -121,7 +148,7 @@
             id: normalizeScenarioId(s.id),
             name: resolveText(s.name, lang) || scenarioFileName(s.id),
             file: scenarioFileName(s.id),
-            group: `mod:${String(mod.modId).toUpperCase()}`,
+            map: '', group: `mod:${String(mod.modId).toUpperCase()}`,
             mode: 'mod', modeLabel: resolveText(s.gameMode, lang),
             players: Number.isInteger(s.playerCount) && s.playerCount > 0 ? s.playerCount : null,
             description: resolveText(s.description, lang, { dropUnknown: true }),
@@ -155,12 +182,15 @@
         return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     }
 
-    // Busca por nome, arquivo, ID, modo ou nome do mod; todas as palavras precisam aparecer.
+    // Busca por nome, arquivo, ID, mapa, modo ou nome do mod; todas as palavras precisam aparecer.
+    // Mapa e modo entram nas duas línguas, como aparecem na tela.
+    function both(table, key) { return table[key] ? [table[key]['pt-BR'], table[key]['en-US']] : []; }
     function searchScenarios(index, term) {
         const words = foldText(term).split(/\s+/).filter(Boolean);
         if (!words.length) return (index || []).slice();
         return (index || []).filter(s => {
-            const hay = foldText([s.name, s.file, s.id, s.modeLabel, s.mode, s.source && s.source.modName].join(' '));
+            const hay = foldText([s.name, s.file, s.id, s.modeLabel, s.mode, s.source && s.source.modName,
+                ...both(MAP_LABELS, s.map), ...both(GROUP_LABELS, s.group), ...both(MODE_LABELS, s.mode)].join(' '));
             return words.every(w => hay.includes(w));
         });
     }
@@ -182,8 +212,18 @@
         return out;
     }
 
+    // Ao repetir uma missão, o que a nova entrada não informa (nome, mod) vem da anterior: assim o atalho
+    // continua sabendo de qual mod a missão é, mesmo quando ela é usada por ID manual ou por predefinição.
     function pushRecent(list, scenario) {
-        return normalizeRecent([scenario, ...(Array.isArray(list) ? list : []).filter(i => !(i && scenario && sameScenarioId(i.id, scenario.id)))]);
+        const items = Array.isArray(list) ? list : [];
+        const previous = scenario ? items.find(i => i && sameScenarioId(i.id, scenario.id)) : null;
+        const merged = previous && scenario ? {
+            ...scenario,
+            name: scenario.name || previous.name,
+            modId: scenario.modId || previous.modId,
+            modName: scenario.modId ? scenario.modName : (scenario.modName || previous.modName),
+        } : scenario;
+        return normalizeRecent([merged, ...items.filter(i => !(i && scenario && sameScenarioId(i.id, scenario.id)))]);
     }
 
     // Predefinições: nome + missão + mods (no formato do config: { modId, name?, version? }).
@@ -252,7 +292,7 @@
     }
 
     return {
-        BASE_GAME, MAPS, MAX_RECENT, MAX_PRESETS,
+        BASE_GAME, MAPS, GROUPS, MAX_RECENT, MAX_PRESETS, mapLabel, groupLabel, modeLabel,
         isValidScenarioId, normalizeScenarioId, sameScenarioId, scenarioFileName, resolveText,
         modScenarioEntries, buildScenarioIndex, findScenario, searchScenarios,
         normalizeRecent, pushRecent,

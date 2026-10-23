@@ -34,9 +34,30 @@ test('catálogo do jogo base: IDs únicos e válidos, mapas e modos conhecidos, 
     assert.strictEqual(byFile('23_Campaign_Arland.conf').id, '{C41618FD18E9D714}Missions/23_Campaign_Arland.conf');
     assert.strictEqual(byFile('23_Campaign_Cain.conf').map, 'kolguyev');
     assert.strictEqual(byFile('23_Campaign_Montignac.conf').players, 48);
+    // Terreno real (cadeia de SubScene): Capture & Hold e SP01/SP02 em Everon, Ômega em Kolguyev.
+    for (const e of sc.BASE_GAME.filter(x => x.mode === 'captureandhold')) assert.strictEqual(e.map, 'everon', e.id);
+    for (const f of ['Scenario01_Intro.conf', 'Scenario05_Hill.conf']) assert.strictEqual(byFile(f).map, 'kolguyev');
+    for (const f of ['SP01_ReginaV2.conf', 'SP02_AirSupport.conf']) assert.strictEqual(byFile(f).map, 'everon');
+    assert.strictEqual(byFile('10_MpTest.conf').map, 'other');
     // Os IDs que a versão anterior usava como padrão não existem no jogo.
     assert.ok(!byFile('23_Campaign_North.conf'));
     assert.ok(!byFile('17_Campaign_Arland.conf'));
+});
+
+test('grupos do seletor: terreno, ou "other" para um jogador e testes; rótulos nas duas línguas', () => {
+    const index = sc.buildScenarioIndex([], 'pt-BR');
+    const count = (g) => index.filter(s => s.group === g).length;
+    assert.deepStrictEqual(sc.GROUPS.map(count), [21, 4, 4, 8]);
+    const omega = sc.findScenario(index, '{10B8582BAD9F7040}Missions/Scenario01_Intro.conf');
+    assert.deepStrictEqual([omega.map, omega.group, omega.modeLabel], ['kolguyev', 'other', 'Um jogador']);
+    const morton = sc.findScenario(index, '{2B4183DF23E88249}Missions/CAH_Morton.conf');
+    assert.deepStrictEqual([morton.map, morton.group, morton.modeLabel], ['everon', 'everon', 'Capture & Hold']);
+    assert.strictEqual(sc.mapLabel('kolguyev', 'en-US'), 'Kolguyev');
+    assert.strictEqual(sc.groupLabel('other', 'pt-BR'), 'Um jogador e testes');
+    assert.strictEqual(sc.groupLabel('other', 'en-US'), 'Singleplayer and tests');
+    assert.strictEqual(sc.modeLabel('conflict-hqc', 'en-US'), 'Conflict: HQ Commander');
+    assert.strictEqual(sc.mapLabel('nada', 'pt-BR'), '');
+    assert.strictEqual(sc.buildScenarioIndex([], 'en-US')[0].modeLabel, 'Conflict');
 });
 
 test('isValidScenarioId, normalizeScenarioId, sameScenarioId e scenarioFileName', () => {
@@ -101,6 +122,15 @@ test('searchScenarios: várias palavras, sem acento, por mapa, arquivo, modo e m
     assert.deepStrictEqual(names('CombatOpsCain.conf'), ['Combat Ops - Kolguyev']);
     assert.strictEqual(names('').length, index.length);
     assert.deepStrictEqual(names('nada-disso-existe'), []);
+    // Mapa e modo como aparecem na tela, em português e em inglês.
+    const everon = sc.BASE_GAME.filter(e => e.map === 'everon').length;
+    assert.strictEqual(sc.searchScenarios(index, 'everon').length, everon);
+    assert.ok(names('everon leste').includes('Conflict (Leste)'));
+    assert.strictEqual(sc.searchScenarios(index, 'um jogador').length, 8); // o grupo "Um jogador e testes" inclui o teste
+    assert.strictEqual(sc.searchScenarios(index, 'singleplayer').length, 8);
+    assert.ok(names('teste').includes('Multiplayer Test'));
+    assert.strictEqual(sc.searchScenarios(index, 'comandante').length, 3);
+    assert.deepStrictEqual(names('kolguyev conflict comandante'), ['Conflict: Comandante do QG - Kolguyev']);
 });
 
 test('histórico: mais recente primeiro, sem repetir, com limite e só IDs válidos', () => {
@@ -116,6 +146,18 @@ test('histórico: mais recente primeiro, sem repetir, com limite e só IDs váli
     assert.deepStrictEqual(sc.normalizeRecent([null, 'x', { id: 'ruim' }, { id: '{ECC61978EDCC2B5A}Missions/23_Campaign.conf', modId: 'naoehex' }]),
         [{ id: '{ECC61978EDCC2B5A}Missions/23_Campaign.conf', name: '' }]);
     assert.deepStrictEqual(sc.normalizeRecent('lixo'), []);
+});
+
+test('repetir uma missão sem informar o mod mantém o mod e o nome que o histórico já tinha', () => {
+    const kunar = { id: '{F502397D68F3D1AC}Missions/Conflict_PvE_Kunar.conf', name: 'Kunar', modId: '99CF50A0AC924AD7', modName: 'Kunar PvE' };
+    let recent = sc.pushRecent([], kunar);
+    recent = sc.pushRecent(recent, { id: '{ECC61978EDCC2B5A}Missions/23_Campaign.conf', name: 'Everon' });
+    recent = sc.pushRecent(recent, { id: '{f502397d68f3d1ac}Missions/Conflict_PvE_Kunar.conf', name: '' });
+    assert.deepStrictEqual(recent[0], kunar);
+    assert.strictEqual(recent.length, 2);
+    // Informar outro mod substitui.
+    recent = sc.pushRecent(recent, { id: kunar.id, name: 'Kunar 2', modId: 'AAAAAAAAAAAAAAAA', modName: '' });
+    assert.deepStrictEqual(recent[0], { id: kunar.id, name: 'Kunar 2', modId: 'AAAAAAAAAAAAAAAA', modName: '' });
 });
 
 test('predefinições: normaliza, substitui pelo nome, respeita limite e remove', () => {

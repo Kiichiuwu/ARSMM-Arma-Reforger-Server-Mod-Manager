@@ -428,7 +428,7 @@
             <div class="sc-head">
                 <h3 id="scTitle" style="margin:0; color:var(--accent); white-space:nowrap;" data-i18n="sc.title">MAPAS E MISSÕES</h3>
                 <input type="text" id="scSearch" data-i18n-placeholder="sc.search" placeholder="🔍 Buscar por missão, mapa, modo, arquivo ou mod..." oninput="renderScenarioPicker()" style="flex:1;">
-                <button class="btn-auto" style="margin:0;" onclick="closeScenarioPicker()" data-i18n-title="sc.close" title="Fechar" aria-label="Fechar">✕</button>
+                <button class="btn-auto" style="margin:0;" onclick="closeScenarioPicker()" data-i18n-title="sc.close" title="Fechar">✕</button>
             </div>
             <div class="sc-body">
                 <nav class="sc-groups" id="scGroups"></nav>
@@ -436,7 +436,7 @@
             </div>
             <div class="sc-foot">
                 <span style="font-size:0.75em; color:#777;" data-i18n="sc.manualLabel">ID MANUAL:</span>
-                <input type="text" id="scManualId" placeholder="{GUID}Missions/Nome.conf" style="flex:1; min-width:240px; padding:7px;" onkeydown="if(event.key==='Enter')useManualScenario()">
+                <input type="text" id="scManualId" data-i18n-placeholder="sc.manualPlaceholder" placeholder="{GUID}Missions/Nome.conf" style="flex:1; min-width:240px; padding:7px;" onkeydown="if(event.key==='Enter')useManualScenario()">
                 <button class="btn-auto" style="margin:0;" onclick="useManualScenario()" data-i18n="sc.useManual">USAR ID</button>
                 <span class="sc-error" id="scManualError"></span>
             </div>
@@ -493,19 +493,9 @@
                 'sc.groupsGame': 'Mapas do jogo',
                 'sc.groupsMods': 'Mods da lista',
                 'sc.groupsOther': 'Outros',
-                'sc.map.everon': 'Everon',
-                'sc.map.arland': 'Arland',
-                'sc.map.kolguyev': 'Kolguyev',
-                'sc.map.cah': 'Capture & Hold',
-                'sc.map.other': 'Um jogador e testes',
-                'sc.mode.conflict': 'Conflict',
-                'sc.mode.conflict-hqc': 'Conflict: Comandante do QG',
-                'sc.mode.gamemaster': 'Game Master',
-                'sc.mode.combatops': 'Combat Ops',
-                'sc.mode.captureandhold': 'Capture & Hold',
-                'sc.mode.singleplayer': 'Um jogador',
-                'sc.mode.test': 'Teste',
-                'sc.baseGame': 'Jogo base',
+                'sc.manualPlaceholder': '{GUID}Missions/Nome.conf',
+                'sc.modsFailed': 'Os dados de {n} mod(s) não carregaram da Workshop; a missão pode ser de um deles.',
+                'sc.retry': 'Tentar de novo',
                 'sc.fromMod': 'Mod:',
                 'sc.players': 'até {n} jogadores',
                 'sc.use': 'USAR',
@@ -746,19 +736,9 @@
                 'sc.groupsGame': 'Game maps',
                 'sc.groupsMods': 'Mods in the list',
                 'sc.groupsOther': 'Other',
-                'sc.map.everon': 'Everon',
-                'sc.map.arland': 'Arland',
-                'sc.map.kolguyev': 'Kolguyev',
-                'sc.map.cah': 'Capture & Hold',
-                'sc.map.other': 'Singleplayer and tests',
-                'sc.mode.conflict': 'Conflict',
-                'sc.mode.conflict-hqc': 'Conflict: HQ Commander',
-                'sc.mode.gamemaster': 'Game Master',
-                'sc.mode.combatops': 'Combat Ops',
-                'sc.mode.captureandhold': 'Capture & Hold',
-                'sc.mode.singleplayer': 'Singleplayer',
-                'sc.mode.test': 'Test',
-                'sc.baseGame': 'Base game',
+                'sc.manualPlaceholder': '{GUID}Missions/Name.conf',
+                'sc.modsFailed': 'The data of {n} mod(s) did not load from the Workshop; the mission may belong to one of them.',
+                'sc.retry': 'Retry',
                 'sc.fromMod': 'Mod:',
                 'sc.players': 'up to {n} players',
                 'sc.use': 'USE',
@@ -1152,9 +1132,11 @@
             mod.pinOnFetch = false;
             mod.status = 'ok';
             // Mod de missão adicionado pelo seletor: traz as dependências junto (e as delas, em cadeia).
+            // Na hora, não num setTimeout: a busca nova entra em pendingModLoads antes desta terminar, então quem
+            // espera waitForModMetadata (salvar, fechar) vê a cadeia inteira. Mod removido no meio não traz nada.
             if (mod.addDepsOnFetch) {
                 mod.addDepsOnFetch = false;
-                if (mod.dependencies.some(d => !findMod(d.id))) setTimeout(() => addAllDeps(mod, { recursive: true }), 0);
+                if (modList.includes(mod) && mod.dependencies.some(d => !findMod(d.id))) addAllDeps(mod, { recursive: true });
             }
         }
 
@@ -1185,10 +1167,15 @@
         }
 
         // Antes de salvar, espera (com limite) os dados de mods recém-adicionados, para gravar nome e versão reais.
+        // Repete enquanto surgirem buscas novas (dependências que chegam durante a espera), até o limite de tempo.
         const pendingModLoads = new Set();
-        function waitForModMetadata(maxMs) {
-            if (!pendingModLoads.size) return Promise.resolve();
-            return Promise.race([Promise.all([...pendingModLoads]), new Promise(resolve => setTimeout(resolve, maxMs))]);
+        async function waitForModMetadata(maxMs) {
+            const deadline = Date.now() + maxMs;
+            while (pendingModLoads.size) {
+                const left = deadline - Date.now();
+                if (left <= 0) return;
+                await Promise.race([Promise.all([...pendingModLoads]), new Promise(resolve => setTimeout(resolve, left))]);
+            }
         }
 
         function addMod() {
@@ -1302,6 +1289,7 @@
         }
 
         function delMod(mod) {
+            mod.addDepsOnFetch = false;
             const i = modList.indexOf(mod);
             if (i >= 0) modList.splice(i, 1);
             scheduleRender();
@@ -1412,7 +1400,7 @@
             list.replaceChildren(fragment);
             renderGameVersionSummary(gvCounts);
             renderScenarioCard();
-            if ($('modalScenario').style.display === 'flex') renderScenarioPicker();
+            renderScenarioPicker();
 
             if (focusAfterRender) {
                 const { modId, dir } = focusAfterRender;
@@ -1513,7 +1501,11 @@
         // Catálogo do jogo base (extraído dos dados do jogo) + missões que os mods da lista publicam na Workshop.
         const scenarios = window.ARSMM_SCENARIOS;
         let scenarioGroup = 'everon';  // grupo aberto no seletor
-        let previewMod = null;         // mod da Workshop em prévia: { modId, name, scenarios, dependencies } | { error } | { loading }
+        let previewMod = null;         // mod da Workshop em prévia: { modId, name, scenarios } | { error } | { loading }
+        let previewSeq = 0;            // só a última prévia pedida vale
+        let presetMessage = null;      // { text, ok } mostrado sob o formulário de predefinição
+        let pickerKey = '';            // o que o seletor desenhou da última vez (evita redesenhar à toa)
+        let pickerReturnFocus = null;  // botão que abriu o seletor
 
         function tf(key, values) { return t(key).replace(/\{(\w+)\}/g, (m, k) => (values && k in values ? String(values[k]) : m)); }
 
@@ -1522,10 +1514,10 @@
         }
 
         function scenarioGroupLabel(entry) {
-            return entry.source.type === 'mod' ? `${t('sc.fromMod')} ${entry.source.modName}` : t(`sc.map.${entry.group}`);
+            return entry.source.type === 'mod' ? `${t('sc.fromMod')} ${entry.source.modName}` : scenarios.mapLabel(entry.map, getAppLanguage());
         }
 
-        function scenarioModeLabel(entry) { return entry.modeLabel || (entry.mode !== 'mod' ? t(`sc.mode.${entry.mode}`) : ''); }
+        function scenarioModeLabel(entry) { return entry.modeLabel; }
 
         function scenarioMetaText(entry) {
             return [scenarioGroupLabel(entry), scenarioModeLabel(entry), entry.players ? tf('sc.players', { n: entry.players }) : '']
@@ -1533,6 +1525,12 @@
         }
 
         function modsStillLoading() { return modList.some(m => m.status === 'pending' || m.status === 'loading'); }
+        function failedMods() { return modList.filter(m => m.status === 'error'); }
+
+        function retryFailedMods() {
+            for (const mod of failedMods()) mod.status = 'pending';
+            refreshModMetadata();
+        }
 
         function maxPlayersValue() { return clampInt(val('confPlayers'), 1, 128, 64); }
 
@@ -1563,21 +1561,35 @@
                         h('button', { class: 'sc-mini-btn', onclick: () => addScenarioMod(recent.modId, recent.modName) }, t('sc.addMod'))));
                 } else if (modsStillLoading()) {
                     parts.push(h('div', { class: 'sc-meta' }, t('sc.searchingMods')));
+                } else if (failedMods().length) {
+                    parts.push(h('div', { class: 'sc-warn' }, `⚠ ${tf('sc.modsFailed', { n: failedMods().length })}`,
+                        h('button', { class: 'sc-mini-btn', onclick: retryFailedMods }, t('sc.retry'))));
                 } else {
                     parts.push(h('div', { class: 'sc-warn' }, `⚠ ${t('sc.unknown')}`));
                 }
             }
-            card.replaceChildren(...parts);
+            // O cartão é aria-live: só troca o conteúdo quando o texto muda, senão o leitor de tela repete tudo.
+            const key = parts.map(n => n.textContent).join('\u0001');
+            if (card.dataset.key !== key) {
+                card.dataset.key = key;
+                card.replaceChildren(...parts);
+            }
             renderScenarioRecent();
         }
 
         function renderScenarioRecent() {
             const box = $('scenarioRecent');
+            const index = scenarioIndex();
             const others = scenarioRecent.filter(r => !scenarios.sameScenarioId(r.id, currentScenario));
+            // O nome vem do catálogo na língua atual; o salvo no histórico só serve quando o mod não carregou.
+            const label = (r) => { const e = scenarios.findScenario(index, r.id); return (e && e.name) || r.name || scenarios.scenarioFileName(r.id); };
+            const key = others.map(r => `${r.id}|${label(r)}`).join('\u0001');
+            if (box.dataset.key === key) return;
+            box.dataset.key = key;
             box.replaceChildren(...others.map(r => h('button', {
                 class: 'sc-chip', title: `${t('sc.recentTitle')}: ${r.id}`,
                 onclick: () => useRecentScenario(r),
-            }, r.name || scenarios.scenarioFileName(r.id))));
+            }, label(r))));
         }
 
         function addScenarioMod(modId, modName) {
@@ -1628,40 +1640,74 @@
         }
 
         // --- Seletor (janela) ---
+        function isScenarioPickerOpen() { return $('modalScenario').style.display === 'flex'; }
+
+        function setPageInert(inert) {
+            for (const el of [$('mainNav'), document.querySelector('.content-viewport')]) {
+                if (inert) el.setAttribute('inert', ''); else el.removeAttribute('inert');
+            }
+        }
+
         function openScenarioPicker() {
             const entry = scenarios.findScenario(scenarioIndex(), currentScenario);
             if (entry) scenarioGroup = entry.source.type === 'mod' ? `mod:${entry.source.modId}` : entry.group;
+            pickerReturnFocus = document.activeElement;
             setVal('scSearch', '');
             $('scManualError').textContent = '';
+            presetMessage = null;
             $('modalScenario').style.display = 'flex';
-            renderScenarioPicker();
+            setPageInert(true);
+            renderScenarioPicker({ force: true });
             $('scSearch').focus();
         }
 
-        function closeScenarioPicker() { $('modalScenario').style.display = 'none'; }
+        function closeScenarioPicker() {
+            if (!isScenarioPickerOpen()) return;
+            $('modalScenario').style.display = 'none';
+            setPageInert(false);
+            const back = pickerReturnFocus;
+            pickerReturnFocus = null;
+            if (back && back.isConnected && typeof back.focus === 'function') back.focus();
+        }
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && $('modalScenario').style.display === 'flex') closeScenarioPicker();
+            if (e.key === 'Escape' && isScenarioPickerOpen()) closeScenarioPicker();
         });
 
         function selectScenarioGroup(group) {
             scenarioGroup = group;
             setVal('scSearch', '');
-            renderScenarioPicker();
+            presetMessage = null;
+            renderScenarioPicker({ force: true });
         }
 
         function groupButton(group, label, count) {
             return h('button', {
                 class: 'sc-group-btn' + (scenarioGroup === group && !val('scSearch').trim() ? ' active' : ''),
+                'data-focus-key': `g:${group}`,
                 onclick: () => selectScenarioGroup(group),
             }, h('span', { title: label }, label), count === null ? null : h('span', {}, String(count)));
         }
 
-        function renderScenarioPicker() {
+        // O que o seletor mostra depende só disto; renderList chama a cada mod que chega, e redesenhar sem
+        // mudança nenhuma tirava o foco e engolia cliques.
+        function scenarioPickerKey() {
+            return JSON.stringify([
+                getAppLanguage(), scenarioGroup, val('scSearch').trim(), currentScenario,
+                modList.map(m => [m.modId, m.status, m.status === 'ok' ? (m.scenarios || []).length : 0, modDisplayName(m)]),
+                scenarioPresets, previewMod, presetMessage,
+            ]);
+        }
+
+        function renderScenarioPicker({ force = false } = {}) {
+            if (!isScenarioPickerOpen()) return;
+            const key = scenarioPickerKey();
+            if (!force && key === pickerKey) return;
+            pickerKey = key;
             const index = scenarioIndex();
             const groups = $('scGroups');
             const nodes = [h('div', { class: 'sc-group-title' }, t('sc.groupsGame'))];
-            for (const map of scenarios.MAPS) nodes.push(groupButton(map, t(`sc.map.${map}`), index.filter(s => s.group === map).length));
+            for (const group of scenarios.GROUPS) nodes.push(groupButton(group, scenarios.groupLabel(group, getAppLanguage()), index.filter(s => s.group === group).length));
 
             nodes.push(h('div', { class: 'sc-group-title' }, t('sc.groupsMods')));
             const modGroups = modList.filter(m => m.status === 'ok' && scenarios.modScenarioEntries(m, getAppLanguage()).length);
@@ -1669,12 +1715,21 @@
                 const group = `mod:${mod.modId.toUpperCase()}`;
                 nodes.push(groupButton(group, modDisplayName(mod) || mod.modId, index.filter(s => s.group === group).length));
             }
-            if (!modGroups.length) nodes.push(h('div', { class: 'sc-group-note' }, modsStillLoading() ? t('sc.modsLoading') : t('sc.noModScenarios')));
-            else if (modsStillLoading()) nodes.push(h('div', { class: 'sc-group-note' }, t('sc.modsLoading')));
+            if (modsStillLoading()) nodes.push(h('div', { class: 'sc-group-note' }, t('sc.modsLoading')));
+            else if (failedMods().length) nodes.push(h('div', { class: 'sc-group-note', style: 'color:#fbc02d;' }, tf('sc.modsFailed', { n: failedMods().length }), ' ',
+                h('button', { class: 'sc-mini-btn', 'data-focus-key': 'retry', onclick: retryFailedMods }, t('sc.retry'))));
+            else if (!modGroups.length) nodes.push(h('div', { class: 'sc-group-note' }, t('sc.noModScenarios')));
 
             nodes.push(h('div', { class: 'sc-group-title' }, t('sc.groupsOther')));
             nodes.push(groupButton('preview', t('sc.preview'), null));
             nodes.push(groupButton('presets', t('sc.presets'), scenarioPresets.length));
+            // Guarda o foco (por chave estável) e o que estava sendo digitado nos campos da lista.
+            const active = document.activeElement;
+            const focusKey = active && active.dataset ? active.dataset.focusKey : '';
+            const kept = ['scPreviewInput', 'scPresetName'].map(id => {
+                const el = $(id);
+                return el ? { id, value: el.value, focused: active === el, start: el.selectionStart, end: el.selectionEnd } : null;
+            }).filter(Boolean);
             groups.replaceChildren(...nodes);
 
             const term = val('scSearch').trim();
@@ -1692,17 +1747,16 @@
                 const items = index.filter(s => s.group === scenarioGroup);
                 listNodes.push(...(items.length ? items.map(scenarioRow) : [h('div', { class: 'sc-empty' }, t('sc.noResults'))]));
             }
-            // O redesenho acontece também quando chegam dados de mods: mantém o que estava sendo digitado.
-            const kept = ['scPreviewInput', 'scPresetName'].map(id => {
-                const el = $(id);
-                return el ? { id, value: el.value, focused: document.activeElement === el, start: el.selectionStart, end: el.selectionEnd } : null;
-            }).filter(Boolean);
             $('scList').replaceChildren(...listNodes);
             for (const k of kept) {
                 const el = $(k.id);
                 if (!el) continue;
                 el.value = k.value;
                 if (k.focused) { el.focus(); try { el.setSelectionRange(k.start, k.end); } catch (e) { /* tipo sem seleção */ } }
+            }
+            if (focusKey) {
+                const again = $('modalScenario').querySelector(`[data-focus-key="${CSS.escape(focusKey)}"]`);
+                if (again) again.focus();
             }
         }
 
@@ -1712,6 +1766,7 @@
             const button = h('button', {
                 class: 'btn-install-all',
                 title: needsMod ? t('sc.addAndUseTitle') : '',
+                'data-focus-key': `use:${entry.id}`,
                 onclick: () => chooseScenario(entry),
             }, isCurrent ? t('sc.current') : needsMod ? t('sc.addAndUse') : t('sc.use'));
             button.disabled = isCurrent;
@@ -1749,25 +1804,31 @@
             const match = String(input ? input.value : '').match(/([A-Fa-f0-9]{16})/);
             if (!match) { alert(t('invalidModId')); return; }
             const modId = match[1].toUpperCase();
+            const seq = ++previewSeq;
             previewMod = { loading: true, modId: '' };
             renderScenarioPicker();
+            let result;
             try {
                 const data = await api(bridge.workshop.getMod(modId));
-                previewMod = { modId, name: String(data.name || modId), scenarios: Array.isArray(data.scenarios) ? data.scenarios : [] };
+                result = { modId, name: String(data.name || modId), scenarios: Array.isArray(data.scenarios) ? data.scenarios : [] };
             } catch (e) {
-                previewMod = { error: e.message, modId: '' };
+                result = { error: e.message, modId: '' };
             }
-            if (scenarioGroup === 'preview' || val('scSearch').trim()) renderScenarioPicker();
+            if (seq !== previewSeq) return; // outra prévia foi pedida depois desta
+            previewMod = result;
+            renderScenarioPicker();
         }
 
         // Predefinições: missão + lista de mods, para trocar as duas de uma vez.
         function renderPresetsGroup() {
             const name = h('input', { type: 'text', id: 'scPresetName', maxlength: '60', placeholder: t('sc.presetName') });
             name.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveScenarioPreset(); });
+            const message = presetMessage
+                ? h('span', { class: 'sc-error', style: presetMessage.ok ? 'color:var(--success);' : '' }, presetMessage.text)
+                : null;
             const nodes = [
                 h('div', { class: 'sc-list-note' }, t('sc.presetsHelp')),
-                h('div', { class: 'sc-inline-form' }, name, h('button', { class: 'btn-install-all', onclick: saveScenarioPreset }, t('sc.presetSave')),
-                    h('span', { class: 'sc-error', id: 'scPresetError' })),
+                h('div', { class: 'sc-inline-form' }, name, h('button', { class: 'btn-install-all', 'data-focus-key': 'preset-save', onclick: saveScenarioPreset }, t('sc.presetSave')), message),
             ];
             if (!scenarioPresets.length) { nodes.push(h('div', { class: 'sc-empty' }, t('sc.presetEmpty'))); return nodes; }
             const index = scenarioIndex();
@@ -1779,19 +1840,28 @@
                         h('div', { class: 'sc-name' }, preset.name),
                         h('div', { class: 'sc-meta' }, `${scenarioName} · ${tf('sc.presetMods', { n: preset.mods.length })}`),
                         h('div', { class: 'sc-file', title: preset.scenarioId }, scenarios.scenarioFileName(preset.scenarioId))),
-                    h('button', { class: 'btn-install-all', onclick: () => applyScenarioPreset(preset) }, t('sc.presetApply')),
-                    h('button', { class: 'btn-auto', style: 'margin:0; border-color:var(--danger); color:var(--danger);', onclick: () => deleteScenarioPreset(preset) }, t('sc.presetDelete'))));
+                    h('button', { class: 'btn-install-all', 'data-focus-key': `apply:${preset.name}`, onclick: () => applyScenarioPreset(preset) }, t('sc.presetApply')),
+                    h('button', { class: 'btn-auto', style: 'margin:0; border-color:var(--danger); color:var(--danger);', 'data-focus-key': `del:${preset.name}`, onclick: () => deleteScenarioPreset(preset) }, t('sc.presetDelete'))));
             }
             return nodes;
         }
 
-        function saveScenarioPreset() {
-            const error = (key) => { const el = $('scPresetError'); if (el) el.textContent = t(key); };
+        function showPresetMessage(key, ok = false) {
+            presetMessage = { text: t(key), ok };
+            renderScenarioPicker();
+        }
+
+        let savingPreset = false;
+        async function saveScenarioPreset() {
+            if (savingPreset) return;
             const name = val('scPresetName').replace(/\s+/g, ' ').trim();
-            if (!name) { error('sc.presetNeedName'); return; }
-            if (!scenarios.isValidScenarioId(currentScenario)) { error('sc.presetNeedScenario'); return; }
+            if (!name) { showPresetMessage('sc.presetNeedName'); return; }
+            if (!scenarios.isValidScenarioId(currentScenario)) { showPresetMessage('sc.presetNeedScenario'); return; }
             const exists = scenarioPresets.some(p => p.name.toLowerCase() === name.slice(0, 60).toLowerCase());
             if (exists && !confirm(t('sc.presetOverwrite'))) return;
+            // Como no salvamento do perfil: espera os mods recém-adicionados para gravar versão e dependências.
+            savingPreset = true;
+            try { await waitForModMetadata(3000); } finally { savingPreset = false; }
             const entry = scenarios.findScenario(scenarioIndex(), currentScenario);
             const recent = scenarioRecent.find(r => scenarios.sameScenarioId(r.id, currentScenario));
             const next = scenarios.upsertPreset(scenarioPresets, {
@@ -1799,17 +1869,18 @@
                 scenarioName: (entry && entry.name) || (recent && recent.name) || '',
                 mods: modList.map(exportMod),
             });
-            if (!next) { error('sc.presetLimit'); return; }
+            if (!next) { showPresetMessage('sc.presetLimit'); return; }
             scenarioPresets = next;
-            renderScenarioPicker();
+            const input = $('scPresetName');
+            if (input) input.value = '';
             updateJson();
-            const el = $('scPresetError');
-            if (el) { el.style.color = 'var(--success)'; el.textContent = t('sc.presetSaved'); }
+            showPresetMessage('sc.presetSaved', true);
         }
 
         function deleteScenarioPreset(preset) {
             if (!confirm(tf('sc.presetDeleteConfirm', { name: preset.name }))) return;
             scenarioPresets = scenarios.removePreset(scenarioPresets, preset.name);
+            presetMessage = null;
             renderScenarioPicker();
             updateJson();
         }
@@ -1822,7 +1893,9 @@
             modLoadGeneration++;
             modList = preset.mods.map(modFromConfig);
             currentScenario = preset.scenarioId;
-            scenarioRecent = scenarios.pushRecent(scenarioRecent, { id: preset.scenarioId, name: scenarioName });
+            const recent = { id: preset.scenarioId, name: scenarioName };
+            if (entry && entry.source.type === 'mod') { recent.modId = entry.source.modId; recent.modName = entry.source.modName; }
+            scenarioRecent = scenarios.pushRecent(scenarioRecent, recent);
             closeScenarioPicker();
             renderList();
             refreshModMetadata();

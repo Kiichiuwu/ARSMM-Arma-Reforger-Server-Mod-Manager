@@ -14,6 +14,9 @@
     const MAX_PRESETS = 30;
     const MAX_PRESET_NAME = 60;
     const MAX_PRESET_MODS = 500;
+    const MAX_LIBRARY = 50;
+    const MAX_LIBRARY_SCENARIOS = 50;
+    const MOD_ID_RE = /^[0-9A-F]{16}$/;
 
     // map = terreno onde a missão roda. group = aba do seletor: o terreno, ou "other" para missões de um
     // jogador e de teste (ficam separadas para não poluir as listas de servidor).
@@ -291,7 +294,121 @@
         return { added, removed, changed };
     }
 
+    // --- Biblioteca de mapas ---
+    // Cada entrada é um mod que publica missões (o "mapa"), as missões dele e os mods que vão junto com ele
+    // (ele mesmo e as dependências, em ordem de carga). shared = mods que também servem a outras coisas
+    // (ex.: um pacote de conteúdo) e por isso nunca saem da lista quando o mapa é trocado.
+    function normalizeLibraryScenarios(list) {
+        const out = [];
+        for (const raw of Array.isArray(list) ? list : []) {
+            if (!raw || typeof raw !== 'object' || !isValidScenarioId(raw.id)) continue;
+            const id = normalizeScenarioId(raw.id);
+            if (out.some(o => sameScenarioId(o.id, id))) continue;
+            out.push({
+                id,
+                name: String(raw.name || '').slice(0, 200),
+                gameMode: String(raw.gameMode || '').slice(0, 100),
+                playerCount: Number.isInteger(raw.playerCount) && raw.playerCount > 0 ? raw.playerCount : null,
+            });
+            if (out.length >= MAX_LIBRARY_SCENARIOS) break;
+        }
+        return out;
+    }
+
+    function normalizeMapLibrary(list) {
+        const out = [];
+        for (const raw of Array.isArray(list) ? list : []) {
+            if (!raw || typeof raw !== 'object') continue;
+            const modId = String(raw.modId || '').toUpperCase();
+            if (!MOD_ID_RE.test(modId) || out.some(e => e.modId === modId)) continue;
+            let mods = normalizePresetMods(raw.mods);
+            // O próprio mapa sempre faz parte do conjunto, e por último (depois das dependências).
+            const root = mods.find(m => m.modId === modId) || { modId };
+            mods = [...mods.filter(m => m.modId !== modId), root];
+            const ids = new Set(mods.map(m => m.modId));
+            const shared = [...new Set((Array.isArray(raw.shared) ? raw.shared : []).map(x => String(x || '').toUpperCase()))]
+                .filter(id => ids.has(id) && id !== modId);
+            out.push({ modId, name: String(raw.name || '').slice(0, 120), mods, shared, scenarios: normalizeLibraryScenarios(raw.scenarios) });
+            if (out.length >= MAX_LIBRARY) break;
+        }
+        return out;
+    }
+
+    function findMapEntry(library, modId) {
+        const id = String(modId || '').toUpperCase();
+        return (Array.isArray(library) ? library : []).find(e => e && String(e.modId).toUpperCase() === id) || null;
+    }
+
+    // Salva ou atualiza pelo modId. Sem `shared` na entrada nova, mantém o que o usuário marcou antes.
+    // null se a biblioteca está cheia.
+    function upsertMapEntry(library, entry) {
+        const current = normalizeMapLibrary(library);
+        const previous = entry ? findMapEntry(current, entry.modId) : null;
+        const clean = normalizeMapLibrary([{ ...entry, shared: entry && Array.isArray(entry.shared) ? entry.shared : (previous ? previous.shared : []) }])[0];
+        if (!clean) return null;
+        const i = current.findIndex(e => e.modId === clean.modId);
+        if (i >= 0) { current[i] = clean; return current; }
+        if (current.length >= MAX_LIBRARY) return null;
+        return [...current, clean];
+    }
+
+    function removeMapEntry(library, modId) {
+        const id = String(modId || '').toUpperCase();
+        return normalizeMapLibrary(library).filter(e => e.modId !== id);
+    }
+
+    // O mod e tudo de que ele depende, direta ou indiretamente, com as dependências antes (ordem de carga).
+    // mods: o que se sabe de cada mod ({ modId, name, dependencies: [{ id, name }] }). Dependência sem dados
+    // entra sem as dependências dela. Ciclos não travam.
+    function dependencyChain(rootId, mods) {
+        const byId = new Map((Array.isArray(mods) ? mods : []).map(m => [String(m.modId).toUpperCase(), m]));
+        const out = [];
+        const seen = new Set();
+        function visit(id, name) {
+            id = String(id || '').toUpperCase();
+            if (!MOD_ID_RE.test(id) || seen.has(id)) return;
+            seen.add(id);
+            const mod = byId.get(id);
+            for (const dep of (mod && Array.isArray(mod.dependencies) ? mod.dependencies : [])) visit(dep && dep.id, dep && dep.name);
+            out.push({ modId: id, name: String((mod && mod.name) || name || '') });
+        }
+        visit(rootId, '');
+        return out;
+    }
+
+    // Plano para usar uma missão do mapa targetId (null = jogo base): quais mods saem e quais entram.
+    // Só saem mods que pertencem a algum mapa da biblioteca, que o mapa novo não usa, que ninguém marcou como
+    // "manter sempre" e de que nenhum mod que fica na lista depende. Mods fora da biblioteca nunca são tocados.
+    function planMapSwitch({ mods, library, targetId }) {
+        const list = Array.isArray(mods) ? mods : [];
+        const lib = normalizeMapLibrary(library);
+        const present = new Map(list.map(m => [String(m.modId).toUpperCase(), m]));
+        const target = targetId ? findMapEntry(lib, targetId) : null;
+        const targetIds = new Set(target ? target.mods.map(m => m.modId) : (targetId ? [String(targetId).toUpperCase()] : []));
+        const shared = new Set(lib.flatMap(e => e.shared));
+        const remove = new Set();
+        for (const entry of lib) {
+            for (const m of entry.mods) {
+                if (present.has(m.modId) && !targetIds.has(m.modId) && !shared.has(m.modId)) remove.add(m.modId);
+            }
+        }
+        const depsOf = (m) => (Array.isArray(m.dependencies) ? m.dependencies : []).map(d => String((d && d.id) || '').toUpperCase());
+        for (let changed = true; changed;) {
+            changed = false;
+            for (const id of [...remove]) {
+                const neededBy = list.some(m => !remove.has(String(m.modId).toUpperCase()) && depsOf(m).includes(id));
+                if (neededBy) { remove.delete(id); changed = true; }
+            }
+        }
+        const add = target ? target.mods.filter(m => !present.has(m.modId)) : [];
+        return {
+            remove: list.map(m => String(m.modId).toUpperCase()).filter(id => remove.has(id)),
+            add,
+        };
+    }
+
     return {
+        normalizeMapLibrary, findMapEntry, upsertMapEntry, removeMapEntry, dependencyChain, planMapSwitch, MAX_LIBRARY,
         BASE_GAME, MAPS, GROUPS, MAX_RECENT, MAX_PRESETS, mapLabel, groupLabel, modeLabel,
         isValidScenarioId, normalizeScenarioId, sameScenarioId, scenarioFileName, resolveText,
         modScenarioEntries, buildScenarioIndex, findScenario, searchScenarios,

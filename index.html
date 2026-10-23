@@ -151,6 +151,16 @@
         .sc-foot { border-top: 1px solid #333; padding: 10px 18px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .sc-inline-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #111; border: 1px solid #333; border-radius: 4px; padding: 10px; margin-bottom: 6px; }
         .sc-inline-form input { flex: 1; min-width: 200px; padding: 7px 9px; }
+        .sc-toggle { display: flex; gap: 8px; align-items: flex-start; font-size: 0.75em; color: #aaa; padding: 4px 10px 8px; cursor: pointer; line-height: 1.3; }
+        .sc-toggle input { width: auto; margin: 1px 0 0; accent-color: var(--accent); flex-shrink: 0; }
+        .sc-library { background: #111; border: 1px solid #333; border-radius: 4px; padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; }
+        .sc-lib-mods { display: flex; flex-wrap: wrap; gap: 6px; }
+        .sc-lib-mod { display: inline-flex; align-items: center; gap: 6px; background: #1b1b1b; border: 1px solid #333; border-radius: 4px; padding: 4px 8px; font-size: 0.78em; color: #ccc; max-width: 100%; }
+        .sc-lib-mod.root { border-color: var(--accent); color: var(--accent); }
+        .sc-lib-mod.missing { color: #777; border-style: dashed; }
+        .sc-lib-mod label { display: inline-flex; align-items: center; gap: 4px; color: #888; cursor: pointer; white-space: nowrap; }
+        .sc-lib-mod input { width: auto; margin: 0; accent-color: var(--accent); }
+        .sc-switch { font-size: 0.75em; color: #8ab4f8; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .view-toggle-box { display: flex; background: #111; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin-right: 15px; }
         .view-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; color: #555; font-size: 1.1em; transition: 0.2s; }
         .view-btn:hover { color: #fff; background: #222; }
@@ -494,6 +504,26 @@
                 'sc.groupsMods': 'Mods da lista',
                 'sc.groupsOther': 'Outros',
                 'sc.manualPlaceholder': '{GUID}Missions/Nome.conf',
+                'sc.groupsLibrary': 'Mapas salvos',
+                'sc.groupsOtherMods': 'Outros mods com missões',
+                'sc.swapToggle': 'Trocar os mods do mapa junto com a missão',
+                'sc.swapTitle': 'Ligado: ao escolher a missão de outro mapa, os mods do mapa anterior saem da lista (e do config) e os do novo entram. Mods fora da biblioteca, marcados como "manter sempre" ou usados por outro mod da lista nunca saem.',
+                'sc.libraryEmpty': 'Nenhum mapa salvo ainda. Um mapa entra aqui, com as dependências, quando você usa uma missão dele.',
+                'sc.libraryMods': 'Vão junto com este mapa ({n} mod(s)). Marque "manter sempre" nos que também servem a outras coisas, para não saírem da lista na troca.',
+                'sc.libraryShared': 'manter sempre',
+                'sc.librarySharedTitle': 'Este mod não sai da lista quando o mapa é trocado (ex.: pacote de conteúdo usado por outros mods).',
+                'sc.libraryRoot': 'o mapa',
+                'sc.libraryMissing': 'fora da lista',
+                'sc.libraryRemove': 'REMOVER DA BIBLIOTECA',
+                'sc.libraryRemoveConfirm': 'Remover "{name}" da biblioteca? A lista de mods atual não muda.',
+                'sc.libraryActive': 'em uso',
+                'sc.libraryNotInList': 'salvo, fora da lista',
+                'sc.libraryFull': 'Biblioteca de mapas cheia: exclua algum mapa para salvar este.',
+                'sc.useLibraryTitle': 'Coloca os {n} mod(s) deste mapa na lista e usa esta missão.',
+                'sc.switched': 'Mapa trocado. Saíram: {removed}. Entraram: {added}.',
+                'sc.switchedNone': 'nenhum',
+                'sc.andMore': 'e mais {n}',
+                'sc.undo': 'Desfazer',
                 'sc.modsFailed': 'Os dados de {n} mod(s) não carregaram da Workshop; a missão pode ser de um deles.',
                 'sc.retry': 'Tentar de novo',
                 'sc.fromMod': 'Mod:',
@@ -737,6 +767,26 @@
                 'sc.groupsMods': 'Mods in the list',
                 'sc.groupsOther': 'Other',
                 'sc.manualPlaceholder': '{GUID}Missions/Name.conf',
+                'sc.groupsLibrary': 'Saved maps',
+                'sc.groupsOtherMods': 'Other mods with missions',
+                'sc.swapToggle': 'Swap the map\'s mods along with the mission',
+                'sc.swapTitle': 'On: when you choose a mission from another map, the previous map\'s mods leave the list (and the config) and the new map\'s mods come in. Mods outside the library, marked "always keep" or used by another mod in the list never leave.',
+                'sc.libraryEmpty': 'No saved maps yet. A map is added here, with its dependencies, when you use one of its missions.',
+                'sc.libraryMods': 'These go with this map ({n} mod(s)). Tick "always keep" on the ones that serve other purposes too, so they stay in the list when you switch.',
+                'sc.libraryShared': 'always keep',
+                'sc.librarySharedTitle': 'This mod stays in the list when the map is switched (e.g. a content pack used by other mods).',
+                'sc.libraryRoot': 'the map',
+                'sc.libraryMissing': 'not in the list',
+                'sc.libraryRemove': 'REMOVE FROM LIBRARY',
+                'sc.libraryRemoveConfirm': 'Remove "{name}" from the library? The current mod list does not change.',
+                'sc.libraryActive': 'in use',
+                'sc.libraryNotInList': 'saved, not in the list',
+                'sc.libraryFull': 'Map library is full: delete a map to save this one.',
+                'sc.useLibraryTitle': 'Puts this map\'s {n} mod(s) in the list and uses this mission.',
+                'sc.switched': 'Map switched. Removed: {removed}. Added: {added}.',
+                'sc.switchedNone': 'none',
+                'sc.andMore': 'and {n} more',
+                'sc.undo': 'Undo',
                 'sc.modsFailed': 'The data of {n} mod(s) did not load from the Workshop; the mission may belong to one of them.',
                 'sc.retry': 'Retry',
                 'sc.fromMod': 'Mod:',
@@ -1046,6 +1096,8 @@
         let currentScenario = '';      // game.scenarioId
         let scenarioRecent = [];       // meta.recentScenarios: [{ id, name, modId?, modName? }]
         let scenarioPresets = [];      // meta.scenarioPresets: [{ name, scenarioId, scenarioName, mods }]
+        let mapLibrary = [];           // meta.mapLibrary: [{ modId, name, mods, shared, scenarios }]
+        let mapSwap = true;            // meta.mapSwap: trocar os mods do mapa junto com a missão
 
         applyLocale();
 
@@ -1399,6 +1451,7 @@
             });
             list.replaceChildren(fragment);
             renderGameVersionSummary(gvCounts);
+            syncMapLibrary();
             renderScenarioCard();
             renderScenarioPicker();
 
@@ -1506,11 +1559,160 @@
         let presetMessage = null;      // { text, ok } mostrado sob o formulário de predefinição
         let pickerKey = '';            // o que o seletor desenhou da última vez (evita redesenhar à toa)
         let pickerReturnFocus = null;  // botão que abriu o seletor
+        let lastMapSwitch = null;      // última troca de mapa: { removed, added, before, after } (para "Desfazer")
+        const removedFromLibrary = new Set(); // mapas que o usuário tirou da biblioteca nesta sessão (não voltam sozinhos)
 
         function tf(key, values) { return t(key).replace(/\{(\w+)\}/g, (m, k) => (values && k in values ? String(values[k]) : m)); }
 
+        // Mapas da biblioteca cujo mod não está na lista (ou ainda não carregou): as missões vêm do que foi salvo.
+        function libraryModsForIndex() {
+            return mapLibrary
+                .filter(e => { const m = findMod(e.modId); return !(m && m.status === 'ok'); })
+                .map(e => ({ modId: e.modId, name: e.name, workshopName: '', scenarios: e.scenarios }));
+        }
+
         function scenarioIndex(extraMods = []) {
-            return scenarios.buildScenarioIndex([...modList.filter(m => m.status === 'ok'), ...extraMods], getAppLanguage());
+            return scenarios.buildScenarioIndex([...modList.filter(m => m.status === 'ok'), ...libraryModsForIndex(), ...extraMods], getAppLanguage());
+        }
+
+        // --- Biblioteca de mapas ---
+        function modsForChain() {
+            return modList.map(m => ({ modId: m.modId, name: modDisplayName(m), dependencies: m.status === 'ok' ? m.dependencies : [] }));
+        }
+
+        // Entrada da biblioteca a partir de um mod da lista: ele + dependências (em cadeia), com a versão atual.
+        function libraryEntryFromList(mod) {
+            const id = mod.modId.toUpperCase();
+            const prev = scenarios.findMapEntry(mapLibrary, id);
+            const chain = scenarios.dependencyChain(id, modsForChain());
+            const mods = chain.map(c => {
+                const present = findMod(c.modId);
+                if (present) return exportMod(present);
+                const old = prev && prev.mods.find(x => x.modId === c.modId);
+                return old || (c.name ? { modId: c.modId, name: c.name } : { modId: c.modId });
+            });
+            return {
+                modId: id, name: modDisplayName(mod) || id, mods, shared: prev ? prev.shared : [],
+                scenarios: (mod.scenarios || []).map(x => ({ id: x.id, name: x.name, gameMode: x.gameMode, playerCount: x.playerCount })),
+            };
+        }
+
+        // Mantém a biblioteca em dia com a lista (dependências e versões) e salva o mapa da missão atual.
+        function syncMapLibrary() {
+            const current = scenarios.findScenario(scenarioIndex(), currentScenario);
+            const currentMod = current && current.source.type === 'mod' ? findMod(current.source.modId) : null;
+            if (currentMod && currentMod.status === 'ok' && !scenarios.findMapEntry(mapLibrary, currentMod.modId)
+                && !removedFromLibrary.has(currentMod.modId.toUpperCase())) {
+                const next = scenarios.upsertMapEntry(mapLibrary, libraryEntryFromList(currentMod));
+                if (next) mapLibrary = next;
+            }
+            for (const entry of mapLibrary) {
+                const mod = findMod(entry.modId);
+                if (!mod || mod.status !== 'ok') continue;
+                const fresh = scenarios.normalizeMapLibrary([libraryEntryFromList(mod)])[0];
+                if (fresh && JSON.stringify(fresh) !== JSON.stringify(entry)) {
+                    const next = scenarios.upsertMapEntry(mapLibrary, fresh);
+                    if (next) mapLibrary = next;
+                }
+            }
+        }
+
+        // Salva na biblioteca o mapa da missão escolhida (com o que se sabe dele agora).
+        function rememberMap(entry) {
+            const id = entry.source.modId;
+            removedFromLibrary.delete(id);
+            const present = findMod(id);
+            let next = null;
+            if (present && present.status === 'ok') {
+                next = scenarios.upsertMapEntry(mapLibrary, libraryEntryFromList(present));
+            } else if (!scenarios.findMapEntry(mapLibrary, id)) {
+                const preview = previewMod && previewMod.modId === id ? previewMod : null;
+                const deps = preview && Array.isArray(preview.dependencies) ? preview.dependencies : [];
+                next = scenarios.upsertMapEntry(mapLibrary, {
+                    modId: id, name: entry.source.modName,
+                    mods: [...deps.map(d => ({ modId: d.id, name: d.name })), { modId: id, name: entry.source.modName }],
+                    scenarios: preview
+                        ? preview.scenarios
+                        : [{ id: entry.id, name: entry.name, gameMode: entry.modeLabel, playerCount: entry.players }],
+                });
+            } else {
+                return;
+            }
+            if (next) mapLibrary = next; else alert(t('sc.libraryFull'));
+        }
+
+        function modListShallowEqual(a, b) { return a.length === b.length && a.every((m, i) => m === b[i]); }
+
+        // Troca os mods de mapa: entram os do mapa targetId (salvos na biblioteca, com versão) e, se removeOthers,
+        // saem os dos outros mapas da biblioteca (planMapSwitch decide o que pode sair).
+        function switchMapMods(targetId, { removeOthers }) {
+            const plan = scenarios.planMapSwitch({
+                mods: modList.map(m => ({ modId: m.modId, dependencies: m.status === 'ok' ? m.dependencies : [] })),
+                library: mapLibrary, targetId,
+            });
+            const removeIds = new Set(removeOthers ? plan.remove : []);
+            if (!removeIds.size && !plan.add.length) return;
+            const before = { modList: modList.slice(), scenario: currentScenario, players: val('confPlayers') };
+            const removed = modList.filter(m => removeIds.has(m.modId.toUpperCase()));
+            for (const m of removed) m.addDepsOnFetch = false;
+            modList = modList.filter(m => !removeIds.has(m.modId.toUpperCase()));
+            const added = plan.add.map(raw => {
+                const mod = modFromConfig(raw);
+                mod.addDepsOnFetch = true; // dependência nova que o mapa ganhou desde que foi salvo entra também
+                return mod;
+            });
+            modList.push(...added);
+            const label = (m) => modDisplayName(m) || m.modId;
+            lastMapSwitch = { removed: removed.map(label), added: added.map(label), before, after: null };
+            if (added.length) refreshModMetadata();
+            scheduleRender();
+        }
+
+        function undoMapSwitch() {
+            if (!lastMapSwitch) return;
+            const { before } = lastMapSwitch;
+            lastMapSwitch = null;
+            modList = before.modList;
+            currentScenario = before.scenario;
+            setVal('confPlayers', before.players);
+            refreshModMetadata();
+            updateJson();
+            scheduleRender();
+        }
+
+        function namesSummary(names) {
+            if (!names.length) return t('sc.switchedNone');
+            const shown = names.slice(0, 3).join(', ');
+            return names.length > 3 ? `${shown} ${tf('sc.andMore', { n: names.length - 3 })}` : shown;
+        }
+
+        // "Desfazer" só vale enquanto nada mudou depois da troca (senão desfaria edições do usuário).
+        function mapSwitchStillUndoable() {
+            if (!lastMapSwitch || !lastMapSwitch.after) return false;
+            return lastMapSwitch.after.scenario === currentScenario && modListShallowEqual(lastMapSwitch.after.modList, modList);
+        }
+
+        function toggleMapShared(entry, modId, keep) {
+            const shared = keep ? [...entry.shared, modId] : entry.shared.filter(x => x !== modId);
+            const next = scenarios.upsertMapEntry(mapLibrary, { ...entry, shared });
+            if (next) mapLibrary = next;
+            updateJson();
+            renderScenarioPicker();
+        }
+
+        function removeLibraryEntry(entry) {
+            if (!confirm(tf('sc.libraryRemoveConfirm', { name: entry.name || entry.modId }))) return;
+            mapLibrary = scenarios.removeMapEntry(mapLibrary, entry.modId);
+            removedFromLibrary.add(entry.modId);
+            if (scenarioGroup === `mod:${entry.modId}` && !findMod(entry.modId)) scenarioGroup = 'everon';
+            updateJson();
+            renderScenarioPicker({ force: true });
+        }
+
+        function setMapSwap(on) {
+            mapSwap = !!on;
+            updateJson();
+            renderScenarioPicker();
         }
 
         function scenarioGroupLabel(entry) {
@@ -1568,6 +1770,11 @@
                     parts.push(h('div', { class: 'sc-warn' }, `⚠ ${t('sc.unknown')}`));
                 }
             }
+            if (mapSwitchStillUndoable()) {
+                parts.push(h('div', { class: 'sc-switch' },
+                    `↔ ${tf('sc.switched', { removed: namesSummary(lastMapSwitch.removed), added: namesSummary(lastMapSwitch.added) })}`,
+                    h('button', { class: 'sc-mini-btn', onclick: undoMapSwitch }, t('sc.undo'))));
+            }
             // O cartão é aria-live: só troca o conteúdo quando o texto muda, senão o leitor de tela repete tudo.
             const key = parts.map(n => n.textContent).join('\u0001');
             if (card.dataset.key !== key) {
@@ -1601,10 +1808,19 @@
             refreshModMetadata();
         }
 
-        // Troca a missão; a missão de um mod que não está na lista traz o mod (e as dependências) junto.
+        // Troca a missão. Missão de mod: o mapa vai para a biblioteca e os mods dele entram na lista; com a troca
+        // ligada, os mods dos outros mapas da biblioteca saem. Missão do jogo base com a troca ligada: saem todos.
         function chooseScenario(entry) {
-            if (entry.source.type === 'mod' && !findMod(entry.source.modId)) addScenarioMod(entry.source.modId, entry.source.modName);
+            const targetId = entry.source.type === 'mod' ? entry.source.modId : null;
+            if (targetId) rememberMap(entry);
+            lastMapSwitch = null;
+            if (targetId || mapSwap) switchMapMods(targetId, { removeOthers: mapSwap });
+            if (targetId && !findMod(targetId)) addScenarioMod(targetId, entry.source.modName);
             applyScenario(entry.id, entry);
+            if (lastMapSwitch) {
+                lastMapSwitch.after = { modList: modList.slice(), scenario: currentScenario };
+                renderScenarioCard();
+            }
         }
 
         function applyScenario(id, entry) {
@@ -1695,7 +1911,7 @@
             return JSON.stringify([
                 getAppLanguage(), scenarioGroup, val('scSearch').trim(), currentScenario,
                 modList.map(m => [m.modId, m.status, m.status === 'ok' ? (m.scenarios || []).length : 0, modDisplayName(m)]),
-                scenarioPresets, previewMod, presetMessage,
+                scenarioPresets, previewMod, presetMessage, mapLibrary, mapSwap,
             ]);
         }
 
@@ -1709,8 +1925,29 @@
             const nodes = [h('div', { class: 'sc-group-title' }, t('sc.groupsGame'))];
             for (const group of scenarios.GROUPS) nodes.push(groupButton(group, scenarios.groupLabel(group, getAppLanguage()), index.filter(s => s.group === group).length));
 
-            nodes.push(h('div', { class: 'sc-group-title' }, t('sc.groupsMods')));
-            const modGroups = modList.filter(m => m.status === 'ok' && scenarios.modScenarioEntries(m, getAppLanguage()).length);
+            // Mapas salvos (biblioteca) + chave da troca automática.
+            nodes.push(h('div', { class: 'sc-group-title' }, t('sc.groupsLibrary')));
+            const swap = h('input', { type: 'checkbox', 'data-focus-key': 'swap', onchange: (e) => setMapSwap(e.target.checked) });
+            swap.checked = mapSwap;
+            nodes.push(h('label', { class: 'sc-toggle', title: t('sc.swapTitle') }, swap, h('span', {}, t('sc.swapToggle'))));
+            const current = scenarios.findScenario(index, currentScenario);
+            const activeMap = current && current.source.type === 'mod' ? current.source.modId : '';
+            for (const entry of mapLibrary) {
+                const group = `mod:${entry.modId}`;
+                const inList = !!findMod(entry.modId);
+                const mark = entry.modId === activeMap ? '● ' : inList ? '' : '○ ';
+                const button = groupButton(group, `${mark}${entry.name || entry.modId}`, index.filter(s => s.group === group).length);
+                button.title = entry.modId === activeMap ? t('sc.libraryActive') : inList ? '' : t('sc.libraryNotInList');
+                nodes.push(button);
+            }
+            if (!mapLibrary.length) nodes.push(h('div', { class: 'sc-group-note' }, t('sc.libraryEmpty')));
+
+            const modGroups = modList.filter(m => m.status === 'ok' && !scenarios.findMapEntry(mapLibrary, m.modId)
+                && scenarios.modScenarioEntries(m, getAppLanguage()).length);
+            // Sem outros mods com missões (e nada carregando ou com falha), a seção some quando já há mapas salvos.
+            if (modGroups.length || modsStillLoading() || failedMods().length || !mapLibrary.length) {
+                nodes.push(h('div', { class: 'sc-group-title' }, t('sc.groupsOtherMods')));
+            }
             for (const mod of modGroups) {
                 const group = `mod:${mod.modId.toUpperCase()}`;
                 nodes.push(groupButton(group, modDisplayName(mod) || mod.modId, index.filter(s => s.group === group).length));
@@ -1718,7 +1955,7 @@
             if (modsStillLoading()) nodes.push(h('div', { class: 'sc-group-note' }, t('sc.modsLoading')));
             else if (failedMods().length) nodes.push(h('div', { class: 'sc-group-note', style: 'color:#fbc02d;' }, tf('sc.modsFailed', { n: failedMods().length }), ' ',
                 h('button', { class: 'sc-mini-btn', 'data-focus-key': 'retry', onclick: retryFailedMods }, t('sc.retry'))));
-            else if (!modGroups.length) nodes.push(h('div', { class: 'sc-group-note' }, t('sc.noModScenarios')));
+            else if (!modGroups.length && !mapLibrary.length) nodes.push(h('div', { class: 'sc-group-note' }, t('sc.noModScenarios')));
 
             nodes.push(h('div', { class: 'sc-group-title' }, t('sc.groupsOther')));
             nodes.push(groupButton('preview', t('sc.preview'), null));
@@ -1744,6 +1981,8 @@
                 listNodes.push(...renderPresetsGroup());
             } else {
                 if (scenarioGroup === 'other') listNodes.push(h('div', { class: 'sc-list-note' }, t('sc.singleplayerNote')));
+                const libEntry = scenarioGroup.startsWith('mod:') ? scenarios.findMapEntry(mapLibrary, scenarioGroup.slice(4)) : null;
+                if (libEntry) listNodes.push(renderLibraryInfo(libEntry));
                 const items = index.filter(s => s.group === scenarioGroup);
                 listNodes.push(...(items.length ? items.map(scenarioRow) : [h('div', { class: 'sc-empty' }, t('sc.noResults'))]));
             }
@@ -1760,15 +1999,41 @@
             }
         }
 
+        // O que vai junto com um mapa salvo, com a opção "manter sempre" por mod.
+        function renderLibraryInfo(entry) {
+            const chips = entry.mods.map(m => {
+                const present = findMod(m.modId);
+                const name = (present && modDisplayName(present)) || m.name || m.modId;
+                const isRoot = m.modId === entry.modId;
+                const chip = h('span', { class: 'sc-lib-mod' + (isRoot ? ' root' : '') + (present ? '' : ' missing'), title: `${m.modId}${present ? '' : ` (${t('sc.libraryMissing')})`}` }, name);
+                if (isRoot) {
+                    chip.append(h('span', { style: 'color:#888;' }, `(${t('sc.libraryRoot')})`));
+                } else {
+                    const box = h('input', { type: 'checkbox', 'data-focus-key': `shared:${entry.modId}:${m.modId}`, onchange: (e) => toggleMapShared(entry, m.modId, e.target.checked) });
+                    box.checked = entry.shared.includes(m.modId);
+                    chip.append(h('label', { title: t('sc.librarySharedTitle') }, box, t('sc.libraryShared')));
+                }
+                return chip;
+            });
+            return h('div', { class: 'sc-library' },
+                h('div', { class: 'sc-list-note', style: 'padding:0; color:#ccc;' }, tf('sc.libraryMods', { n: entry.mods.length })),
+                h('div', { class: 'sc-lib-mods' }, ...chips),
+                h('div', {}, h('button', {
+                    class: 'btn-auto', style: 'margin:0; border-color:var(--danger); color:var(--danger);',
+                    'data-focus-key': `lib-del:${entry.modId}`, onclick: () => removeLibraryEntry(entry),
+                }, t('sc.libraryRemove'))));
+        }
+
         function scenarioRow(entry) {
             const isCurrent = scenarios.sameScenarioId(entry.id, currentScenario);
             const needsMod = entry.source.type === 'mod' && !findMod(entry.source.modId);
+            const libEntry = entry.source.type === 'mod' ? scenarios.findMapEntry(mapLibrary, entry.source.modId) : null;
             const button = h('button', {
                 class: 'btn-install-all',
-                title: needsMod ? t('sc.addAndUseTitle') : '',
+                title: needsMod ? (libEntry ? tf('sc.useLibraryTitle', { n: libEntry.mods.length }) : t('sc.addAndUseTitle')) : '',
                 'data-focus-key': `use:${entry.id}`,
                 onclick: () => chooseScenario(entry),
-            }, isCurrent ? t('sc.current') : needsMod ? t('sc.addAndUse') : t('sc.use'));
+            }, isCurrent ? t('sc.current') : needsMod && !libEntry ? t('sc.addAndUse') : t('sc.use'));
             button.disabled = isCurrent;
             return h('div', { class: 'sc-row' + (isCurrent ? ' current' : '') },
                 entry.image ? h('img', { class: 'sc-thumb', src: entry.image, alt: '', loading: 'lazy' }) : null,
@@ -1810,7 +2075,11 @@
             let result;
             try {
                 const data = await api(bridge.workshop.getMod(modId));
-                result = { modId, name: String(data.name || modId), scenarios: Array.isArray(data.scenarios) ? data.scenarios : [] };
+                result = {
+                    modId, name: String(data.name || modId),
+                    scenarios: Array.isArray(data.scenarios) ? data.scenarios : [],
+                    dependencies: Array.isArray(data.dependencies) ? data.dependencies : [],
+                };
             } catch (e) {
                 result = { error: e.message, modId: '' };
             }
@@ -1891,6 +2160,7 @@
             const scenarioName = (entry && entry.name) || preset.scenarioName || scenarios.scenarioFileName(preset.scenarioId);
             if (!confirm(tf('sc.presetApplyConfirm', { name: preset.name, scenario: scenarioName, added: diff.added.length, removed: diff.removed.length, changed: diff.changed.length }))) return;
             modLoadGeneration++;
+            lastMapSwitch = null;
             modList = preset.mods.map(modFromConfig);
             currentScenario = preset.scenarioId;
             const recent = { id: preset.scenarioId, name: scenarioName };
@@ -2032,6 +2302,8 @@
                     serverGameVersion: serverGameVersion(),
                     recentScenarios: scenarioRecent,
                     scenarioPresets: scenarioPresets,
+                    mapLibrary: mapLibrary,
+                    mapSwap: mapSwap,
                 },
                 armaConfig,
             };
@@ -2511,6 +2783,10 @@
             setVal('serverGameVersion', typeof profileMeta.serverGameVersion === 'string' ? profileMeta.serverGameVersion : '');
             scenarioRecent = scenarios.normalizeRecent(profileMeta.recentScenarios);
             scenarioPresets = scenarios.normalizePresets(profileMeta.scenarioPresets);
+            mapLibrary = scenarios.normalizeMapLibrary(profileMeta.mapLibrary);
+            mapSwap = profileMeta.mapSwap !== false;
+            lastMapSwitch = null;
+            removedFromLibrary.clear();
             // IP de conexão do RCON: o salvo no perfil, senão o IP público, senão localhost.
             setVal('rconConnectIp', profileMeta.rconHost || json.armaConfig.publicAddress || '127.0.0.1');
             populateForm(json.armaConfig);

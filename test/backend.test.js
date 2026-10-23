@@ -231,6 +231,37 @@ test('no máximo 4 downloads ao mesmo tempo', async () => {
     assert.strictEqual(peak, 4);
 });
 
+test('parseWorkshopPage guarda as missões do mod (gameId válido, imagem https, limites)', () => {
+    const asset = {
+        ...ASSET,
+        scenarios: [
+            { name: 'Conflict PvE - Kunar', image: null, gameId: '{F502397D68F3D1AC}Missions/Conflict_PvE_Kunar.conf', gameMode: 'Conflict PvE', authorName: 'x', description: 'd'.repeat(900), playerCount: 64 },
+            { name: 'VDD', gameId: '{9BA7071BACE76386}Missions/VDD.conf', gameMode: '#AR-Scenario_GameMode_Campaign PVE', playerCount: 0,
+              image: { url: 'https://ar-gcp-cdn.bistudio.com/image/full.jpg', thumbnails: { 'image/jpeg': [{ url: 'https://ar-gcp-cdn.bistudio.com/image/576.jpg', width: 576 }] } } },
+            { name: 'sem id', gameId: '' },
+            { name: 'id ruim', gameId: 'Missions/x.conf' },
+            null,
+        ],
+    };
+    const data = parseWorkshopPage(workshopHtml(asset), '5965550F24A0C152');
+    assert.deepStrictEqual(data.scenarios, [
+        { id: '{F502397D68F3D1AC}Missions/Conflict_PvE_Kunar.conf', name: 'Conflict PvE - Kunar', gameMode: 'Conflict PvE', playerCount: 64, description: 'd'.repeat(600), image: '' },
+        { id: '{9BA7071BACE76386}Missions/VDD.conf', name: 'VDD', gameMode: '#AR-Scenario_GameMode_Campaign PVE', playerCount: null, description: '', image: 'https://ar-gcp-cdn.bistudio.com/image/576.jpg' },
+    ]);
+    assert.deepStrictEqual(parseWorkshopPage(workshopHtml(ASSET), '5965550F24A0C152').scenarios, []);
+    assert.strictEqual(CACHE_SCHEMA_VERSION, 3);
+});
+
+test('cache do esquema anterior (2, sem missões) é descartado', async () => {
+    const cacheFile = path.join(tmp, 'c-v2.json');
+    fs.writeFileSync(cacheFile, JSON.stringify({ schemaVersion: 2, mods: { '5965550F24A0C152': { id: '5965550F24A0C152', name: 'v2', version: '1.2.0', gameVersion: '1.7.0.54', versions: [], fetchedAt: Date.now() } }, changelogs: {} }));
+    let calls = 0;
+    const workshop = createWorkshop({ cacheFile, fetchImpl: async () => { calls++; return fakeResponse(200, workshopHtml({ ...ASSET, scenarios: [{ gameId: '{F502397D68F3D1AC}Missions/K.conf', name: 'K' }] })); } });
+    const data = await workshop.getMod('5965550F24A0C152');
+    assert.strictEqual(calls, 1);
+    assert.strictEqual(data.scenarios.length, 1);
+});
+
 test('parseChangelogPage lê count e as versões com a versão do jogo', () => {
     const html = changelogHtml('5965550F24A0C152', 12, [
         { version: '1.0.1', gameVersion: '1.2.0.1', createdAt: '2024-01-01T00:00:00.000Z', changelog: 'x' },

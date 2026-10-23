@@ -116,6 +116,41 @@
         .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99; justify-content:center; align-items:center; }
         .modal-box { background: var(--panel-bg); padding:20px; width:500px; border:1px solid var(--accent); }
+
+        /* MAPA E MISSÃO */
+        .scenario-card { background: #000; border: 1px solid var(--border); border-radius: 4px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+        .sc-name { font-weight: bold; color: #fff; word-break: break-word; }
+        .sc-meta { font-size: 0.75em; color: #999; }
+        .sc-file { font-family: 'Consolas', monospace; font-size: 0.7em; color: #666; word-break: break-all; }
+        .sc-warn { font-size: 0.75em; color: #fbc02d; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .sc-error { font-size: 0.75em; color: var(--danger); }
+        .sc-mini-btn { background: none; border: 1px solid currentColor; color: inherit; border-radius: 3px; padding: 1px 6px; cursor: pointer; font-size: 0.95em; }
+        .scenario-recent { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .sc-chip { background: #111; border: 1px solid #333; color: #aaa; border-radius: 12px; padding: 3px 9px; font-size: 0.72em; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sc-chip:hover, .sc-chip:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+        .modal-box.scenario-box { width: min(1100px, 94vw); height: min(720px, 90vh); display: flex; flex-direction: column; padding: 0; box-sizing: border-box; }
+        .sc-head { display: flex; gap: 10px; align-items: center; padding: 14px 18px; border-bottom: 1px solid #333; }
+        .sc-body { flex: 1; display: flex; min-height: 0; }
+        .sc-groups { width: 260px; flex-shrink: 0; border-right: 1px solid #333; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+        .sc-group-title { font-size: 0.7em; color: #666; text-transform: uppercase; margin: 10px 10px 4px; font-weight: bold; letter-spacing: 1px; }
+        .sc-group-btn { text-align: left; background: none; border: none; color: #aaa; padding: 8px 10px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; font-size: 0.85em; font-family: inherit; }
+        .sc-group-btn span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sc-group-btn:hover, .sc-group-btn:focus-visible { background: #222; color: #fff; outline: none; }
+        .sc-group-btn.active { background: rgba(212, 225, 87, 0.1); color: var(--accent); }
+        .sc-group-note { font-size: 0.75em; color: #555; padding: 4px 10px; }
+        .sc-list { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .sc-row { display: flex; gap: 12px; align-items: center; background: #181818; border: 1px solid #2a2a2a; border-radius: 4px; padding: 10px; }
+        .sc-row.current { border-color: var(--accent); }
+        .sc-thumb { width: 96px; height: 54px; object-fit: cover; border-radius: 3px; background: #000; flex-shrink: 0; border: 1px solid #333; }
+        .sc-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .sc-desc { font-size: 0.75em; color: #777; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .sc-row .btn-install-all { flex-shrink: 0; }
+        .sc-row .btn-install-all:disabled { background: #333; color: #888; cursor: default; }
+        .sc-list-note { font-size: 0.8em; color: #888; padding: 4px 2px 8px; }
+        .sc-empty { color: #666; padding: 30px; text-align: center; }
+        .sc-foot { border-top: 1px solid #333; padding: 10px 18px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .sc-inline-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #111; border: 1px solid #333; border-radius: 4px; padding: 10px; margin-bottom: 6px; }
+        .sc-inline-form input { flex: 1; min-width: 200px; padding: 7px 9px; }
         .view-toggle-box { display: flex; background: #111; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin-right: 15px; }
         .view-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; color: #555; font-size: 1.1em; transition: 0.2s; }
         .view-btn:hover { color: #fff; background: #222; }
@@ -231,8 +266,13 @@
                     </div>
                     <div><span class="sidebar-label" data-i18n="sidebar.serverAdmins">SERVER ADMINS</span><div class="input-group" style="margin-bottom: 5px;"><input type="text" id="newAdmin" data-i18n-placeholder="placeholderUuid" placeholder="UUID..."><button class="btn-add" onclick="addAdmin()">+</button></div><div class="admin-box" id="adminList"></div><span class="sidebar-label" style="text-transform:none; color:#777; font-size:0.7em;" data-i18n="adminPassword">Admin Password:</span><input type="text" id="confAdminPass" value="" style="font-size:0.8em; padding:6px; background:#111;" oninput="updateJson()"></div>
                     <div><div class="switch-row"><span style="font-weight:bold; font-size:0.9em;" data-i18n="label.password">Senha</span><label class="switch"><input type="checkbox" id="chkPass" onchange="togglePass()"><span class="slider"></span></label></div><input type="text" id="confPass" data-i18n-placeholder="placeholderPassword" placeholder="Senha..." style="display:none;" oninput="updateJson()"></div>
-                    <div><span class="sidebar-label" data-i18n="sidebar.maxPlayers">MAX PLAYERS</span><input type="number" id="confPlayers" value="64" min="1" max="128" oninput="updateJson()"></div>
-                    <div><span class="sidebar-label" data-i18n="sidebar.scenarioId">SCENARIO ID</span><select id="confScenario" onchange="toggleScenarioManual()"><option value="{9002E94F303DD941}Missions/23_Campaign_North.conf" data-i18n="scenario.default1">Conflict - Everon</option><option value="{C78D276F55060411}Missions/17_Campaign_Arland.conf" data-i18n="scenario.default2">Conflict - Arland</option><option value="custom" data-i18n="scenario.custom">Cenário Customizado...</option></select><input type="text" id="scenarioCustom" data-i18n-placeholder="placeholderScenarioCustom" placeholder="{GUID}Missions/Nome.conf" style="display:none; margin-top: 8px; border-color: var(--accent); font-size: 0.85em;" oninput="updateJson()"></div>
+                    <div><span class="sidebar-label" data-i18n="sidebar.maxPlayers">MAX PLAYERS</span><input type="number" id="confPlayers" value="64" min="1" max="128" oninput="updateJson(); renderScenarioCard()"></div>
+                    <div>
+                        <span class="sidebar-label" data-i18n="sidebar.scenario">MAPA E MISSÃO</span>
+                        <div class="scenario-card" id="scenarioCard" aria-live="polite"></div>
+                        <button class="btn-large btn-sec" style="margin-top:6px; padding:8px; font-size:0.8em;" onclick="openScenarioPicker()" data-i18n="sc.change">TROCAR MAPA / MISSÃO</button>
+                        <div class="scenario-recent" id="scenarioRecent"></div>
+                    </div>
                     <hr style="width:100%; border-color:#333; margin: 10px 0;">
                     <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;" data-i18n="label.visible">VISIBLE</span><label class="switch"><input type="checkbox" id="chkVis" checked onchange="updateJson()"><span class="slider"></span></label></div>
                     <div class="switch-row"><span style="font-weight:bold; font-size:0.9em;" data-i18n="label.no3rd">NO 3RD PERSON</span><label class="switch"><input type="checkbox" id="chk3rd" checked onchange="updateJson()"><span class="slider"></span></label></div>
@@ -383,8 +423,29 @@
 
     <div id="modalImport" class="modal"><div class="modal-box"><h3 style="color:var(--accent);" data-i18n="modal.importConfig">IMPORTAR CONFIG</h3><textarea id="importText" rows="10" style="background:#000; color:#fff; width:100%; font-family:monospace;"></textarea><br><br><button class="btn-large btn-primary" onclick="processImport()" data-i18n="button.processImport">PROCESSAR</button><button class="btn-large btn-sec" style="margin-top:5px;" onclick="document.getElementById('modalImport').style.display='none'" data-i18n="button.cancel">CANCELAR</button></div></div>
 
+<div id="modalScenario" class="modal" role="dialog" aria-modal="true" aria-labelledby="scTitle">
+        <div class="modal-box scenario-box">
+            <div class="sc-head">
+                <h3 id="scTitle" style="margin:0; color:var(--accent); white-space:nowrap;" data-i18n="sc.title">MAPAS E MISSÕES</h3>
+                <input type="text" id="scSearch" data-i18n-placeholder="sc.search" placeholder="🔍 Buscar por missão, mapa, modo, arquivo ou mod..." oninput="renderScenarioPicker()" style="flex:1;">
+                <button class="btn-auto" style="margin:0;" onclick="closeScenarioPicker()" data-i18n-title="sc.close" title="Fechar" aria-label="Fechar">✕</button>
+            </div>
+            <div class="sc-body">
+                <nav class="sc-groups" id="scGroups"></nav>
+                <div class="sc-list" id="scList"></div>
+            </div>
+            <div class="sc-foot">
+                <span style="font-size:0.75em; color:#777;" data-i18n="sc.manualLabel">ID MANUAL:</span>
+                <input type="text" id="scManualId" placeholder="{GUID}Missions/Nome.conf" style="flex:1; min-width:240px; padding:7px;" onkeydown="if(event.key==='Enter')useManualScenario()">
+                <button class="btn-auto" style="margin:0;" onclick="useManualScenario()" data-i18n="sc.useManual">USAR ID</button>
+                <span class="sc-error" id="scManualError"></span>
+            </div>
+        </div>
+    </div>
+
 <script src="shared/load-order.js"></script>
 <script src="shared/game-version.js"></script>
+<script src="shared/scenarios.js"></script>
 <script>
         // --- INTEGRAÇÃO COM O ELECTRON ---
         // window.arsmm vem do preload.js; as chamadas devolvem { ok, data } ou { ok: false, code, error }.
@@ -421,11 +482,73 @@
                 'label.password': 'Senha',
                 'placeholderPassword': 'Senha...',
                 'sidebar.maxPlayers': 'MAX PLAYERS',
-                'sidebar.scenarioId': 'SCENARIO ID',
-                'scenario.default1': 'Conflict - Everon',
-                'scenario.default2': 'Conflict - Arland',
-                'scenario.custom': 'Cenário Customizado...',
-                'placeholderScenarioCustom': '{GUID}Missions/Nome.conf',
+                'sidebar.scenario': 'MAPA E MISSÃO',
+                'sc.change': 'TROCAR MAPA / MISSÃO',
+                'sc.title': 'MAPAS E MISSÕES',
+                'sc.search': '🔍 Buscar por missão, mapa, modo, arquivo ou mod...',
+                'sc.close': 'Fechar',
+                'sc.manualLabel': 'ID MANUAL:',
+                'sc.useManual': 'USAR ID',
+                'sc.invalidId': 'Formato inválido. Esperado: {GUID de 16 caracteres}Missions/Nome.conf',
+                'sc.groupsGame': 'Mapas do jogo',
+                'sc.groupsMods': 'Mods da lista',
+                'sc.groupsOther': 'Outros',
+                'sc.map.everon': 'Everon',
+                'sc.map.arland': 'Arland',
+                'sc.map.kolguyev': 'Kolguyev',
+                'sc.map.cah': 'Capture & Hold',
+                'sc.map.other': 'Um jogador e testes',
+                'sc.mode.conflict': 'Conflict',
+                'sc.mode.conflict-hqc': 'Conflict: Comandante do QG',
+                'sc.mode.gamemaster': 'Game Master',
+                'sc.mode.combatops': 'Combat Ops',
+                'sc.mode.captureandhold': 'Capture & Hold',
+                'sc.mode.singleplayer': 'Um jogador',
+                'sc.mode.test': 'Teste',
+                'sc.baseGame': 'Jogo base',
+                'sc.fromMod': 'Mod:',
+                'sc.players': 'até {n} jogadores',
+                'sc.use': 'USAR',
+                'sc.current': 'ATUAL',
+                'sc.addAndUse': 'ADICIONAR MOD E USAR',
+                'sc.addAndUseTitle': 'Adiciona o mod (e as dependências dele) à lista e usa esta missão.',
+                'sc.noneChosen': 'Nenhuma missão escolhida.',
+                'sc.modsLoading': 'Carregando as missões dos mods...',
+                'sc.noModScenarios': 'Nenhum mod da lista publica missões na Workshop.',
+                'sc.noResults': 'Nenhuma missão encontrada.',
+                'sc.singleplayerNote': 'Missões feitas para jogar sozinho. Em servidor dedicado podem não funcionar como esperado.',
+                'sc.playersAbove': 'MAX PLAYERS ({max}) acima do limite da missão ({n}).',
+                'sc.adjust': 'Ajustar',
+                'sc.adjustConfirm': 'Esta missão suporta até {n} jogadores. Ajustar MAX PLAYERS de {max} para {n}?',
+                'sc.singleplayerWarn': 'Missão feita para um jogador.',
+                'sc.invalidCurrent': 'O ID da missão no config tem formato inválido.',
+                'sc.searchingMods': 'Procurando a missão nos mods da lista...',
+                'sc.unknown': 'Não está no jogo base nem nas missões que os mods da lista publicam na Workshop. Confira o ID: o servidor não inicia com uma missão que não existe.',
+                'sc.modMissing': 'Esta missão é do mod {mod}, que não está na lista de mods.',
+                'sc.addMod': 'Adicionar mod',
+                'sc.recentTitle': 'Usada recentemente',
+                'sc.preview': 'Ver missões de um mod da Workshop',
+                'sc.previewHelp': 'Cole a URL ou o ID de um mod para ver as missões que ele publica, sem adicioná-lo antes.',
+                'sc.previewButton': 'VER MISSÕES',
+                'sc.previewPlaceholder': 'URL ou ID do mod...',
+                'sc.previewLoading': 'Buscando na Workshop...',
+                'sc.previewNone': 'Esse mod não publica missões na Workshop.',
+                'sc.previewError': 'Não foi possível buscar o mod: ',
+                'sc.presets': 'Predefinições',
+                'sc.presetsHelp': 'Uma predefinição guarda a missão e a lista de mods. Aplicar troca as duas de uma vez (ex.: "Everon vanilla" e "Kunar com RHS").',
+                'sc.presetName': 'Nome da predefinição...',
+                'sc.presetSave': 'SALVAR ATUAL',
+                'sc.presetApply': 'APLICAR',
+                'sc.presetDelete': 'EXCLUIR',
+                'sc.presetEmpty': 'Nenhuma predefinição salva.',
+                'sc.presetMods': '{n} mod(s)',
+                'sc.presetNeedName': 'Dê um nome para a predefinição.',
+                'sc.presetNeedScenario': 'Escolha uma missão válida antes de salvar.',
+                'sc.presetLimit': 'Limite de predefinições atingido. Exclua alguma antes.',
+                'sc.presetOverwrite': 'Já existe uma predefinição com esse nome. Substituir?',
+                'sc.presetDeleteConfirm': 'Excluir a predefinição "{name}"?',
+                'sc.presetApplyConfirm': 'Aplicar a predefinição "{name}"?\n\nMissão: {scenario}\nMods: +{added} adicionados, -{removed} removidos, {changed} com outra versão.\n\nA lista de mods atual será substituída.',
+                'sc.presetSaved': 'Predefinição salva.',
                 'label.visible': 'VISIBLE',
                 'label.no3rd': 'NO 3RD PERSON',
                 'label.battleye': 'BATTLEYE',
@@ -612,11 +735,73 @@
                 'label.password': 'Password',
                 'placeholderPassword': 'Password...',
                 'sidebar.maxPlayers': 'MAX PLAYERS',
-                'sidebar.scenarioId': 'SCENARIO ID',
-                'scenario.default1': 'Conflict - Everon',
-                'scenario.default2': 'Conflict - Arland',
-                'scenario.custom': 'Custom Scenario...',
-                'placeholderScenarioCustom': '{GUID}Missions/Name.conf',
+                'sidebar.scenario': 'MAP AND MISSION',
+                'sc.change': 'CHANGE MAP / MISSION',
+                'sc.title': 'MAPS AND MISSIONS',
+                'sc.search': '🔍 Search by mission, map, mode, file or mod...',
+                'sc.close': 'Close',
+                'sc.manualLabel': 'MANUAL ID:',
+                'sc.useManual': 'USE ID',
+                'sc.invalidId': 'Invalid format. Expected: {16-character GUID}Missions/Name.conf',
+                'sc.groupsGame': 'Game maps',
+                'sc.groupsMods': 'Mods in the list',
+                'sc.groupsOther': 'Other',
+                'sc.map.everon': 'Everon',
+                'sc.map.arland': 'Arland',
+                'sc.map.kolguyev': 'Kolguyev',
+                'sc.map.cah': 'Capture & Hold',
+                'sc.map.other': 'Singleplayer and tests',
+                'sc.mode.conflict': 'Conflict',
+                'sc.mode.conflict-hqc': 'Conflict: HQ Commander',
+                'sc.mode.gamemaster': 'Game Master',
+                'sc.mode.combatops': 'Combat Ops',
+                'sc.mode.captureandhold': 'Capture & Hold',
+                'sc.mode.singleplayer': 'Singleplayer',
+                'sc.mode.test': 'Test',
+                'sc.baseGame': 'Base game',
+                'sc.fromMod': 'Mod:',
+                'sc.players': 'up to {n} players',
+                'sc.use': 'USE',
+                'sc.current': 'CURRENT',
+                'sc.addAndUse': 'ADD MOD AND USE',
+                'sc.addAndUseTitle': 'Adds the mod (and its dependencies) to the list and uses this mission.',
+                'sc.noneChosen': 'No mission chosen.',
+                'sc.modsLoading': 'Loading the mods\' missions...',
+                'sc.noModScenarios': 'No mod in the list publishes missions on the Workshop.',
+                'sc.noResults': 'No mission found.',
+                'sc.singleplayerNote': 'Missions made to be played alone. They may not work as expected on a dedicated server.',
+                'sc.playersAbove': 'MAX PLAYERS ({max}) is above the mission limit ({n}).',
+                'sc.adjust': 'Adjust',
+                'sc.adjustConfirm': 'This mission supports up to {n} players. Change MAX PLAYERS from {max} to {n}?',
+                'sc.singleplayerWarn': 'Mission made for a single player.',
+                'sc.invalidCurrent': 'The mission ID in the config has an invalid format.',
+                'sc.searchingMods': 'Looking for the mission in the listed mods...',
+                'sc.unknown': 'Not in the base game nor in the missions the listed mods publish on the Workshop. Check the ID: the server does not start with a mission that does not exist.',
+                'sc.modMissing': 'This mission belongs to the mod {mod}, which is not in the mod list.',
+                'sc.addMod': 'Add mod',
+                'sc.recentTitle': 'Recently used',
+                'sc.preview': 'See a Workshop mod\'s missions',
+                'sc.previewHelp': 'Paste a mod URL or ID to see the missions it publishes, without adding it first.',
+                'sc.previewButton': 'SEE MISSIONS',
+                'sc.previewPlaceholder': 'Mod URL or ID...',
+                'sc.previewLoading': 'Searching the Workshop...',
+                'sc.previewNone': 'This mod does not publish missions on the Workshop.',
+                'sc.previewError': 'Could not fetch the mod: ',
+                'sc.presets': 'Presets',
+                'sc.presetsHelp': 'A preset stores the mission and the mod list. Applying it switches both at once (e.g. "Vanilla Everon" and "Kunar with RHS").',
+                'sc.presetName': 'Preset name...',
+                'sc.presetSave': 'SAVE CURRENT',
+                'sc.presetApply': 'APPLY',
+                'sc.presetDelete': 'DELETE',
+                'sc.presetEmpty': 'No saved presets.',
+                'sc.presetMods': '{n} mod(s)',
+                'sc.presetNeedName': 'Give the preset a name.',
+                'sc.presetNeedScenario': 'Choose a valid mission before saving.',
+                'sc.presetLimit': 'Preset limit reached. Delete one first.',
+                'sc.presetOverwrite': 'A preset with this name already exists. Replace it?',
+                'sc.presetDeleteConfirm': 'Delete the preset "{name}"?',
+                'sc.presetApplyConfirm': 'Apply the preset "{name}"?\n\nMission: {scenario}\nMods: +{added} added, -{removed} removed, {changed} with another version.\n\nThe current mod list will be replaced.',
+                'sc.presetSaved': 'Preset saved.',
                 'label.visible': 'VISIBLE',
                 'label.no3rd': 'NO 3RD PERSON',
                 'label.battleye': 'BATTLEYE',
@@ -878,6 +1063,9 @@
         let globalAutoUpdate = false;
         let rconConnected = false;
         let currentModView = 'list';
+        let currentScenario = '';      // game.scenarioId
+        let scenarioRecent = [];       // meta.recentScenarios: [{ id, name, modId?, modName? }]
+        let scenarioPresets = [];      // meta.scenarioPresets: [{ name, scenarioId, scenarioName, mods }]
 
         applyLocale();
 
@@ -900,7 +1088,7 @@
             return {
                 modId: String(raw.modId || ''), name: String(raw.name || ''), version, autoUpdate: version === '', raw,
                 workshopName: '', latestVersion: '', sizeBytes: 0, image: '', dependencies: [],
-                gameVersion: '', versions: [], obsolete: false, olderGameVersions: {},
+                gameVersion: '', versions: [], obsolete: false, olderGameVersions: {}, scenarios: [],
                 status: 'pending', pinOnFetch: false,
             };
         }
@@ -910,7 +1098,7 @@
             return {
                 modId: id.toUpperCase(), name, version: '', autoUpdate: false, raw: {},
                 workshopName: '', latestVersion: '', sizeBytes: 0, image: '', dependencies: [],
-                gameVersion: '', versions: [], obsolete: false, olderGameVersions: {},
+                gameVersion: '', versions: [], obsolete: false, olderGameVersions: {}, scenarios: [],
                 status: 'pending', pinOnFetch: true,
             };
         }
@@ -959,9 +1147,15 @@
             mod.gameVersion = String(data.gameVersion || '');
             mod.versions = Array.isArray(data.versions) ? data.versions : [];
             mod.obsolete = data.obsolete === true;
+            mod.scenarios = Array.isArray(data.scenarios) ? data.scenarios : [];
             if (mod.pinOnFetch && mod.latestVersion) mod.version = mod.latestVersion;
             mod.pinOnFetch = false;
             mod.status = 'ok';
+            // Mod de missão adicionado pelo seletor: traz as dependências junto (e as delas, em cadeia).
+            if (mod.addDepsOnFetch) {
+                mod.addDepsOnFetch = false;
+                if (mod.dependencies.some(d => !findMod(d.id))) setTimeout(() => addAllDeps(mod, { recursive: true }), 0);
+            }
         }
 
         // Busca os dados da Workshop dos mods pendentes, alguns por vez (o backend mantém cache).
@@ -1009,11 +1203,13 @@
         }
 
         // Cada dependência entra logo antes do mod que precisa dela (ordem de carga recomendada).
-        function addAllDeps(parent) {
+        function addAllDeps(parent, { recursive = false } = {}) {
             for (const dep of parent.dependencies) {
                 if (findMod(dep.id)) continue;
                 const at = modList.indexOf(parent);
-                modList.splice(at < 0 ? modList.length : at, 0, newMod(dep.id, dep.name));
+                const mod = newMod(dep.id, dep.name);
+                if (recursive) mod.addDepsOnFetch = true;
+                modList.splice(at < 0 ? modList.length : at, 0, mod);
             }
             scheduleRender();
             refreshModMetadata();
@@ -1215,6 +1411,8 @@
             });
             list.replaceChildren(fragment);
             renderGameVersionSummary(gvCounts);
+            renderScenarioCard();
+            if ($('modalScenario').style.display === 'flex') renderScenarioPicker();
 
             if (focusAfterRender) {
                 const { modId, dir } = focusAfterRender;
@@ -1311,6 +1509,325 @@
             return item;
         }
 
+        // --- MAPA E MISSÃO ---
+        // Catálogo do jogo base (extraído dos dados do jogo) + missões que os mods da lista publicam na Workshop.
+        const scenarios = window.ARSMM_SCENARIOS;
+        let scenarioGroup = 'everon';  // grupo aberto no seletor
+        let previewMod = null;         // mod da Workshop em prévia: { modId, name, scenarios, dependencies } | { error } | { loading }
+
+        function tf(key, values) { return t(key).replace(/\{(\w+)\}/g, (m, k) => (values && k in values ? String(values[k]) : m)); }
+
+        function scenarioIndex(extraMods = []) {
+            return scenarios.buildScenarioIndex([...modList.filter(m => m.status === 'ok'), ...extraMods], getAppLanguage());
+        }
+
+        function scenarioGroupLabel(entry) {
+            return entry.source.type === 'mod' ? `${t('sc.fromMod')} ${entry.source.modName}` : t(`sc.map.${entry.group}`);
+        }
+
+        function scenarioModeLabel(entry) { return entry.modeLabel || (entry.mode !== 'mod' ? t(`sc.mode.${entry.mode}`) : ''); }
+
+        function scenarioMetaText(entry) {
+            return [scenarioGroupLabel(entry), scenarioModeLabel(entry), entry.players ? tf('sc.players', { n: entry.players }) : '']
+                .filter(Boolean).join(' · ');
+        }
+
+        function modsStillLoading() { return modList.some(m => m.status === 'pending' || m.status === 'loading'); }
+
+        function maxPlayersValue() { return clampInt(val('confPlayers'), 1, 128, 64); }
+
+        function renderScenarioCard() {
+            const card = $('scenarioCard');
+            const id = currentScenario;
+            const entry = scenarios.findScenario(scenarioIndex(), id);
+            const parts = [];
+            if (!id) {
+                parts.push(h('div', { class: 'sc-error' }, t('sc.noneChosen')));
+            } else if (entry) {
+                parts.push(h('div', { class: 'sc-name' }, entry.name));
+                parts.push(h('div', { class: 'sc-meta' }, scenarioMetaText(entry)));
+                parts.push(h('div', { class: 'sc-file', title: entry.id }, entry.file));
+                if (entry.players && maxPlayersValue() > entry.players) {
+                    parts.push(h('div', { class: 'sc-warn' }, `⚠ ${tf('sc.playersAbove', { max: maxPlayersValue(), n: entry.players })}`,
+                        h('button', { class: 'sc-mini-btn', onclick: () => { setVal('confPlayers', entry.players); updateJson(); renderScenarioCard(); } }, t('sc.adjust'))));
+                }
+                if (entry.mode === 'singleplayer') parts.push(h('div', { class: 'sc-warn' }, `⚠ ${t('sc.singleplayerWarn')}`));
+            } else {
+                const recent = scenarioRecent.find(r => scenarios.sameScenarioId(r.id, id));
+                parts.push(h('div', { class: 'sc-name' }, (recent && recent.name) || scenarios.scenarioFileName(id)));
+                parts.push(h('div', { class: 'sc-file', title: id }, id));
+                if (!scenarios.isValidScenarioId(id)) {
+                    parts.push(h('div', { class: 'sc-error' }, `⚠ ${t('sc.invalidCurrent')}`));
+                } else if (recent && recent.modId && !findMod(recent.modId)) {
+                    parts.push(h('div', { class: 'sc-warn' }, `⚠ ${tf('sc.modMissing', { mod: recent.modName || recent.modId })}`,
+                        h('button', { class: 'sc-mini-btn', onclick: () => addScenarioMod(recent.modId, recent.modName) }, t('sc.addMod'))));
+                } else if (modsStillLoading()) {
+                    parts.push(h('div', { class: 'sc-meta' }, t('sc.searchingMods')));
+                } else {
+                    parts.push(h('div', { class: 'sc-warn' }, `⚠ ${t('sc.unknown')}`));
+                }
+            }
+            card.replaceChildren(...parts);
+            renderScenarioRecent();
+        }
+
+        function renderScenarioRecent() {
+            const box = $('scenarioRecent');
+            const others = scenarioRecent.filter(r => !scenarios.sameScenarioId(r.id, currentScenario));
+            box.replaceChildren(...others.map(r => h('button', {
+                class: 'sc-chip', title: `${t('sc.recentTitle')}: ${r.id}`,
+                onclick: () => useRecentScenario(r),
+            }, r.name || scenarios.scenarioFileName(r.id))));
+        }
+
+        function addScenarioMod(modId, modName) {
+            if (findMod(modId)) return;
+            const mod = newMod(modId, modName || '');
+            mod.addDepsOnFetch = true;
+            modList.push(mod);
+            scheduleRender();
+            refreshModMetadata();
+        }
+
+        // Troca a missão; a missão de um mod que não está na lista traz o mod (e as dependências) junto.
+        function chooseScenario(entry) {
+            if (entry.source.type === 'mod' && !findMod(entry.source.modId)) addScenarioMod(entry.source.modId, entry.source.modName);
+            applyScenario(entry.id, entry);
+        }
+
+        function applyScenario(id, entry) {
+            currentScenario = scenarios.normalizeScenarioId(id);
+            const recent = { id: currentScenario, name: entry ? entry.name : '' };
+            if (entry && entry.source.type === 'mod') { recent.modId = entry.source.modId; recent.modName = entry.source.modName; }
+            scenarioRecent = scenarios.pushRecent(scenarioRecent, recent);
+            if (entry && entry.players && maxPlayersValue() > entry.players && confirm(tf('sc.adjustConfirm', { n: entry.players, max: maxPlayersValue() }))) {
+                setVal('confPlayers', entry.players);
+            }
+            closeScenarioPicker();
+            updateJson();
+            renderScenarioCard();
+        }
+
+        function useRecentScenario(recent) {
+            const entry = scenarios.findScenario(scenarioIndex(), recent.id);
+            if (entry) { chooseScenario(entry); return; }
+            if (recent.modId && !findMod(recent.modId)) addScenarioMod(recent.modId, recent.modName);
+            applyScenario(recent.id, null);
+            // Mantém nome e mod do histórico enquanto os dados do mod não chegam.
+            scenarioRecent = scenarios.pushRecent(scenarioRecent, recent);
+            renderScenarioCard();
+        }
+
+        function useManualScenario() {
+            const id = val('scManualId').trim();
+            if (!scenarios.isValidScenarioId(id)) { $('scManualError').textContent = t('sc.invalidId'); return; }
+            $('scManualError').textContent = '';
+            setVal('scManualId', '');
+            const entry = scenarios.findScenario(scenarioIndex(previewMod && previewMod.modId ? [previewMod] : []), id);
+            if (entry) chooseScenario(entry); else applyScenario(id, null);
+        }
+
+        // --- Seletor (janela) ---
+        function openScenarioPicker() {
+            const entry = scenarios.findScenario(scenarioIndex(), currentScenario);
+            if (entry) scenarioGroup = entry.source.type === 'mod' ? `mod:${entry.source.modId}` : entry.group;
+            setVal('scSearch', '');
+            $('scManualError').textContent = '';
+            $('modalScenario').style.display = 'flex';
+            renderScenarioPicker();
+            $('scSearch').focus();
+        }
+
+        function closeScenarioPicker() { $('modalScenario').style.display = 'none'; }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && $('modalScenario').style.display === 'flex') closeScenarioPicker();
+        });
+
+        function selectScenarioGroup(group) {
+            scenarioGroup = group;
+            setVal('scSearch', '');
+            renderScenarioPicker();
+        }
+
+        function groupButton(group, label, count) {
+            return h('button', {
+                class: 'sc-group-btn' + (scenarioGroup === group && !val('scSearch').trim() ? ' active' : ''),
+                onclick: () => selectScenarioGroup(group),
+            }, h('span', { title: label }, label), count === null ? null : h('span', {}, String(count)));
+        }
+
+        function renderScenarioPicker() {
+            const index = scenarioIndex();
+            const groups = $('scGroups');
+            const nodes = [h('div', { class: 'sc-group-title' }, t('sc.groupsGame'))];
+            for (const map of scenarios.MAPS) nodes.push(groupButton(map, t(`sc.map.${map}`), index.filter(s => s.group === map).length));
+
+            nodes.push(h('div', { class: 'sc-group-title' }, t('sc.groupsMods')));
+            const modGroups = modList.filter(m => m.status === 'ok' && scenarios.modScenarioEntries(m, getAppLanguage()).length);
+            for (const mod of modGroups) {
+                const group = `mod:${mod.modId.toUpperCase()}`;
+                nodes.push(groupButton(group, modDisplayName(mod) || mod.modId, index.filter(s => s.group === group).length));
+            }
+            if (!modGroups.length) nodes.push(h('div', { class: 'sc-group-note' }, modsStillLoading() ? t('sc.modsLoading') : t('sc.noModScenarios')));
+            else if (modsStillLoading()) nodes.push(h('div', { class: 'sc-group-note' }, t('sc.modsLoading')));
+
+            nodes.push(h('div', { class: 'sc-group-title' }, t('sc.groupsOther')));
+            nodes.push(groupButton('preview', t('sc.preview'), null));
+            nodes.push(groupButton('presets', t('sc.presets'), scenarioPresets.length));
+            groups.replaceChildren(...nodes);
+
+            const term = val('scSearch').trim();
+            const listNodes = [];
+            if (term) {
+                const extra = previewMod && previewMod.modId ? [previewMod] : [];
+                const found = scenarios.searchScenarios(scenarioIndex(extra), term);
+                listNodes.push(...(found.length ? found.map(scenarioRow) : [h('div', { class: 'sc-empty' }, t('sc.noResults'))]));
+            } else if (scenarioGroup === 'preview') {
+                listNodes.push(...renderPreviewGroup());
+            } else if (scenarioGroup === 'presets') {
+                listNodes.push(...renderPresetsGroup());
+            } else {
+                if (scenarioGroup === 'other') listNodes.push(h('div', { class: 'sc-list-note' }, t('sc.singleplayerNote')));
+                const items = index.filter(s => s.group === scenarioGroup);
+                listNodes.push(...(items.length ? items.map(scenarioRow) : [h('div', { class: 'sc-empty' }, t('sc.noResults'))]));
+            }
+            // O redesenho acontece também quando chegam dados de mods: mantém o que estava sendo digitado.
+            const kept = ['scPreviewInput', 'scPresetName'].map(id => {
+                const el = $(id);
+                return el ? { id, value: el.value, focused: document.activeElement === el, start: el.selectionStart, end: el.selectionEnd } : null;
+            }).filter(Boolean);
+            $('scList').replaceChildren(...listNodes);
+            for (const k of kept) {
+                const el = $(k.id);
+                if (!el) continue;
+                el.value = k.value;
+                if (k.focused) { el.focus(); try { el.setSelectionRange(k.start, k.end); } catch (e) { /* tipo sem seleção */ } }
+            }
+        }
+
+        function scenarioRow(entry) {
+            const isCurrent = scenarios.sameScenarioId(entry.id, currentScenario);
+            const needsMod = entry.source.type === 'mod' && !findMod(entry.source.modId);
+            const button = h('button', {
+                class: 'btn-install-all',
+                title: needsMod ? t('sc.addAndUseTitle') : '',
+                onclick: () => chooseScenario(entry),
+            }, isCurrent ? t('sc.current') : needsMod ? t('sc.addAndUse') : t('sc.use'));
+            button.disabled = isCurrent;
+            return h('div', { class: 'sc-row' + (isCurrent ? ' current' : '') },
+                entry.image ? h('img', { class: 'sc-thumb', src: entry.image, alt: '', loading: 'lazy' }) : null,
+                h('div', { class: 'sc-row-info' },
+                    h('div', { class: 'sc-name' }, entry.name),
+                    h('div', { class: 'sc-meta' }, scenarioMetaText(entry)),
+                    h('div', { class: 'sc-file', title: entry.id }, entry.file),
+                    entry.description ? h('div', { class: 'sc-desc', title: entry.description }, entry.description) : null),
+                button);
+        }
+
+        // Prévia: missões de um mod da Workshop que ainda não está na lista.
+        function renderPreviewGroup() {
+            const input = h('input', { type: 'text', id: 'scPreviewInput', placeholder: t('sc.previewPlaceholder') });
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadScenarioPreview(); });
+            const nodes = [
+                h('div', { class: 'sc-list-note' }, t('sc.previewHelp')),
+                h('div', { class: 'sc-inline-form' }, input, h('button', { class: 'btn-install-all', onclick: loadScenarioPreview }, t('sc.previewButton'))),
+            ];
+            if (!previewMod) return nodes;
+            if (previewMod.loading) nodes.push(h('div', { class: 'sc-empty' }, t('sc.previewLoading')));
+            else if (previewMod.error) nodes.push(h('div', { class: 'sc-empty', style: 'color:var(--danger);' }, t('sc.previewError') + previewMod.error));
+            else {
+                const entries = scenarios.modScenarioEntries(previewMod, getAppLanguage());
+                nodes.push(h('div', { class: 'sc-list-note', style: 'color:#ccc;' }, `${previewMod.name} (${previewMod.modId})`));
+                nodes.push(...(entries.length ? entries.map(scenarioRow) : [h('div', { class: 'sc-empty' }, t('sc.previewNone'))]));
+            }
+            return nodes;
+        }
+
+        async function loadScenarioPreview() {
+            const input = $('scPreviewInput');
+            const match = String(input ? input.value : '').match(/([A-Fa-f0-9]{16})/);
+            if (!match) { alert(t('invalidModId')); return; }
+            const modId = match[1].toUpperCase();
+            previewMod = { loading: true, modId: '' };
+            renderScenarioPicker();
+            try {
+                const data = await api(bridge.workshop.getMod(modId));
+                previewMod = { modId, name: String(data.name || modId), scenarios: Array.isArray(data.scenarios) ? data.scenarios : [] };
+            } catch (e) {
+                previewMod = { error: e.message, modId: '' };
+            }
+            if (scenarioGroup === 'preview' || val('scSearch').trim()) renderScenarioPicker();
+        }
+
+        // Predefinições: missão + lista de mods, para trocar as duas de uma vez.
+        function renderPresetsGroup() {
+            const name = h('input', { type: 'text', id: 'scPresetName', maxlength: '60', placeholder: t('sc.presetName') });
+            name.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveScenarioPreset(); });
+            const nodes = [
+                h('div', { class: 'sc-list-note' }, t('sc.presetsHelp')),
+                h('div', { class: 'sc-inline-form' }, name, h('button', { class: 'btn-install-all', onclick: saveScenarioPreset }, t('sc.presetSave')),
+                    h('span', { class: 'sc-error', id: 'scPresetError' })),
+            ];
+            if (!scenarioPresets.length) { nodes.push(h('div', { class: 'sc-empty' }, t('sc.presetEmpty'))); return nodes; }
+            const index = scenarioIndex();
+            for (const preset of scenarioPresets) {
+                const entry = scenarios.findScenario(index, preset.scenarioId);
+                const scenarioName = (entry && entry.name) || preset.scenarioName || scenarios.scenarioFileName(preset.scenarioId);
+                nodes.push(h('div', { class: 'sc-row' },
+                    h('div', { class: 'sc-row-info' },
+                        h('div', { class: 'sc-name' }, preset.name),
+                        h('div', { class: 'sc-meta' }, `${scenarioName} · ${tf('sc.presetMods', { n: preset.mods.length })}`),
+                        h('div', { class: 'sc-file', title: preset.scenarioId }, scenarios.scenarioFileName(preset.scenarioId))),
+                    h('button', { class: 'btn-install-all', onclick: () => applyScenarioPreset(preset) }, t('sc.presetApply')),
+                    h('button', { class: 'btn-auto', style: 'margin:0; border-color:var(--danger); color:var(--danger);', onclick: () => deleteScenarioPreset(preset) }, t('sc.presetDelete'))));
+            }
+            return nodes;
+        }
+
+        function saveScenarioPreset() {
+            const error = (key) => { const el = $('scPresetError'); if (el) el.textContent = t(key); };
+            const name = val('scPresetName').replace(/\s+/g, ' ').trim();
+            if (!name) { error('sc.presetNeedName'); return; }
+            if (!scenarios.isValidScenarioId(currentScenario)) { error('sc.presetNeedScenario'); return; }
+            const exists = scenarioPresets.some(p => p.name.toLowerCase() === name.slice(0, 60).toLowerCase());
+            if (exists && !confirm(t('sc.presetOverwrite'))) return;
+            const entry = scenarios.findScenario(scenarioIndex(), currentScenario);
+            const recent = scenarioRecent.find(r => scenarios.sameScenarioId(r.id, currentScenario));
+            const next = scenarios.upsertPreset(scenarioPresets, {
+                name, scenarioId: currentScenario,
+                scenarioName: (entry && entry.name) || (recent && recent.name) || '',
+                mods: modList.map(exportMod),
+            });
+            if (!next) { error('sc.presetLimit'); return; }
+            scenarioPresets = next;
+            renderScenarioPicker();
+            updateJson();
+            const el = $('scPresetError');
+            if (el) { el.style.color = 'var(--success)'; el.textContent = t('sc.presetSaved'); }
+        }
+
+        function deleteScenarioPreset(preset) {
+            if (!confirm(tf('sc.presetDeleteConfirm', { name: preset.name }))) return;
+            scenarioPresets = scenarios.removePreset(scenarioPresets, preset.name);
+            renderScenarioPicker();
+            updateJson();
+        }
+
+        function applyScenarioPreset(preset) {
+            const diff = scenarios.diffPresetMods(modList.map(exportMod), preset.mods);
+            const entry = scenarios.findScenario(scenarioIndex(), preset.scenarioId);
+            const scenarioName = (entry && entry.name) || preset.scenarioName || scenarios.scenarioFileName(preset.scenarioId);
+            if (!confirm(tf('sc.presetApplyConfirm', { name: preset.name, scenario: scenarioName, added: diff.added.length, removed: diff.removed.length, changed: diff.changed.length }))) return;
+            modLoadGeneration++;
+            modList = preset.mods.map(modFromConfig);
+            currentScenario = preset.scenarioId;
+            scenarioRecent = scenarios.pushRecent(scenarioRecent, { id: preset.scenarioId, name: scenarioName });
+            closeScenarioPicker();
+            renderList();
+            refreshModMetadata();
+        }
+
         // --- ADMINS E CAMPOS SIMPLES ---
         function addAdmin() {
             const input = $('newAdmin');
@@ -1334,21 +1851,6 @@
 
         function removeAdmin(i) { config.game.admins.splice(i, 1); renderAdmins(); updateJson(); }
         function togglePass() { $('confPass').style.display = $('chkPass').checked ? 'block' : 'none'; updateJson(); }
-        function toggleScenarioManual() { $('scenarioCustom').style.display = val('confScenario') === 'custom' ? 'block' : 'none'; updateJson(); }
-
-        function setScenario(id) {
-            const select = $('confScenario');
-            const known = Array.from(select.options).some(o => o.value === id && o.value !== 'custom');
-            if (known) { select.value = id; setVal('scenarioCustom', ''); }
-            else if (id) { select.value = 'custom'; setVal('scenarioCustom', id); }
-            else { select.selectedIndex = 0; setVal('scenarioCustom', ''); }
-            $('scenarioCustom').style.display = select.value === 'custom' ? 'block' : 'none';
-        }
-
-        function currentScenarioId() {
-            return val('confScenario') === 'custom' ? val('scenarioCustom').trim() : val('confScenario');
-        }
-
         // --- CONFIG (server.json) ---
         // O nome é dividido no primeiro " | " só para edição; prefixo + sufixo sempre recompõe o nome original.
         function splitServerName(name) {
@@ -1373,7 +1875,7 @@
             setVal('confPass', game.password ?? '');
             $('confPass').style.display = game.password ? 'block' : 'none';
             setVal('confPlayers', game.maxPlayers ?? 64);
-            setScenario(String(game.scenarioId ?? ''));
+            currentScenario = String(game.scenarioId ?? '').trim();
             $('chkVis').checked = game.visible !== false;
             $('chk3rd').checked = !!props.disableThirdPerson;
             $('chkBE').checked = props.battlEye !== false;
@@ -1386,6 +1888,7 @@
             renderAdmins();
             renderRconState();
             renderList();
+            renderScenarioCard();
             refreshModMetadata();
         }
 
@@ -1412,7 +1915,7 @@
             game.password = $('chkPass').checked ? val('confPass') : '';
             game.passwordAdmin = val('confAdminPass');
             game.maxPlayers = clampInt(val('confPlayers'), 1, 128, 64);
-            game.scenarioId = currentScenarioId();
+            game.scenarioId = currentScenario;
             game.visible = $('chkVis').checked;
             game.admins = [...config.game.admins];
             const props = game.gameProperties = isPlainObject(game.gameProperties) ? game.gameProperties : {};
@@ -1454,6 +1957,8 @@
                     monitorHost: val('monHost').trim(),
                     monitorPort: clampInt(val('monPort'), 1, 65535, 17777),
                     serverGameVersion: serverGameVersion(),
+                    recentScenarios: scenarioRecent,
+                    scenarioPresets: scenarioPresets,
                 },
                 armaConfig,
             };
@@ -1931,6 +2436,8 @@
             profileMeta = isPlainObject(json.meta) ? json.meta : {};
             setVal('bmServerId', profileMeta.bmId || '');
             setVal('serverGameVersion', typeof profileMeta.serverGameVersion === 'string' ? profileMeta.serverGameVersion : '');
+            scenarioRecent = scenarios.normalizeRecent(profileMeta.recentScenarios);
+            scenarioPresets = scenarios.normalizePresets(profileMeta.scenarioPresets);
             // IP de conexão do RCON: o salvo no perfil, senão o IP público, senão localhost.
             setVal('rconConnectIp', profileMeta.rconHost || json.armaConfig.publicAddress || '127.0.0.1');
             populateForm(json.armaConfig);

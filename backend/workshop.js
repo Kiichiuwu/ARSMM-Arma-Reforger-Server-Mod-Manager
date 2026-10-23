@@ -7,10 +7,13 @@ const MOD_ID_RE = /^[0-9A-F]{16}$/;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const NOT_FOUND_TTL_MS = 30 * 60 * 1000;
 // Sobe quando os campos guardados mudam: um cache de outro esquema é descartado inteiro.
-const CACHE_SCHEMA_VERSION = 2;
+// 2: gameVersion/versions/obsolete. 3: scenarios (missões que o mod publica).
+const CACHE_SCHEMA_VERSION = 3;
 // A página do mod só lista as últimas 10 versões; as mais antigas vêm do /changelog (30 por página).
 const MAX_CHANGELOG_PAGES = 20;
 const MOD_VERSION_RE = /^[0-9A-Za-z._+-]{1,40}$/;
+const SCENARIO_ID_RE = /^\{[0-9A-Fa-f]{16}\}[^"\\\r\n{}]+\.conf$/;
+const MAX_SCENARIOS = 50;
 const MAX_CONCURRENT_REQUESTS = 4;
 const REQUEST_TIMEOUT_MS = 10000;
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
@@ -52,8 +55,25 @@ function parseWorkshopPage(html, modId) {
         gameVersion: String(asset.gameVersion || ''),
         versions: (Array.isArray(asset.versions) ? asset.versions : []).map(versionPair).filter(v => v.version),
         obsolete: asset.obsolete === true,
+        scenarios: parseScenarios(asset.scenarios),
         fetchedAt: Date.now(),
     };
+}
+
+// asset.scenarios: missões que o mod publica. gameId é o valor de game.scenarioId no config.
+// name/gameMode/description podem vir como chave de tradução do jogo ("#AR-..."); a interface resolve.
+function parseScenarios(list) {
+    return (Array.isArray(list) ? list : [])
+        .map(s => ({
+            id: String(s?.gameId || '').trim(),
+            name: String(s?.name || '').slice(0, 200),
+            gameMode: String(s?.gameMode || '').slice(0, 100),
+            playerCount: Number.isInteger(s?.playerCount) && s.playerCount > 0 ? s.playerCount : null,
+            description: String(s?.description || '').slice(0, 600),
+            image: s?.image ? pickThumbnail([s.image]) : '',
+        }))
+        .filter(s => SCENARIO_ID_RE.test(s.id))
+        .slice(0, MAX_SCENARIOS);
 }
 
 // /workshop/{ID}/changelog: pageProps.changelogs = { count, rows: [{ version, gameVersion, createdAt, changelog }] }.

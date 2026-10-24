@@ -47,7 +47,9 @@ function createRconManager({ log = () => {}, timeout = 5000 } = {}) {
             if (sessions.get(ownerId) !== rcon) return { connected: false, superseded: true };
             sessions.delete(ownerId);
             log('error', `[RCON] Falha na conexão: ${e.message}`);
-            throw new BackendError('RCON', e.message);
+            const err = new BackendError('RCON', e.message);
+            err.logged = true;
+            throw err;
         }
         if (sessions.get(ownerId) !== rcon) return { connected: false, superseded: true };
         established = true;

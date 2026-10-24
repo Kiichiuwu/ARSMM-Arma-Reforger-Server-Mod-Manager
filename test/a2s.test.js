@@ -86,3 +86,28 @@ test('#players: reconhece número, UID e nome em formatos comuns e guarda o rest
     ]);
     assert.deepStrictEqual(unparsed, ['Players on server:', '(3 players in total)', '3 players listed']);
 });
+
+test('A2S: registra a resposta com a versão crua e marca a falha como já registrada', async () => {
+    const logs = [];
+    const log = (type, msg) => logs.push([type, msg]);
+    const server = await fakeA2sServer({ name: 'Teste', map: 'Everon', players: 1, maxPlayers: 2, password: false });
+    try {
+        await queryInfo('127.0.0.1', server.address().port, { log });
+    } finally {
+        server.close();
+    }
+    assert.strictEqual(logs.length, 1);
+    assert.strictEqual(logs[0][0], 'info');
+    assert.match(logs[0][1], /versão do jogo "1\.8\.0\.13"/);
+
+    const silent = dgram.createSocket('udp4');
+    await new Promise(resolve => silent.bind(0, '127.0.0.1', resolve));
+    try {
+        const err = await queryInfo('127.0.0.1', silent.address().port, { timeout: 200, log }).catch(e => e);
+        assert.strictEqual(err.code, 'UNREACHABLE');
+        assert.strictEqual(err.logged, true);
+        assert.strictEqual(logs[1][0], 'warn');
+    } finally {
+        silent.close();
+    }
+});

@@ -1,6 +1,6 @@
 {
   "name": "compilador",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Arma Reforger Server Mod Manager - gerenciador de perfis, mods, RCON e monitoramento para servidores de Arma Reforger",
   "main": "main.js",
   "scripts": {

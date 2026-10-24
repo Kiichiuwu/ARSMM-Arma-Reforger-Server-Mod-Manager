@@ -84,7 +84,19 @@ test('#players: reconhece número, UID e nome em formatos comuns e guarda o rest
         { id: '1', uid: '3b6e8d0f-2c3e-4d4f-9a0b-1c2d3e4f5a6b', name: 'Ciclano' },
         { id: '2', uid: '', name: 'Beltrano [BR]' },
     ]);
-    assert.deepStrictEqual(unparsed, ['Players on server:', '(3 players in total)', '3 players listed']);
+    // O cabeçalho "Players on server" não é jogador nem precisa aparecer como texto solto.
+    assert.deepStrictEqual(unparsed, ['(3 players in total)', '3 players listed']);
+});
+
+test('#players do Reforger: tira o "[LOG]" e ignora cabeçalho e eco do comando', () => {
+    const text = [
+        '[LOG] Processing Command: #players',
+        '[LOG] Players on server: [Player#] ; [Player UID] ; [Player Name]',
+        '1 ; 2b1321cc-1d4b-44d6-953d-2f70201d41d0 ; ☠ MCB Kiichi ☠',
+    ].join('\n');
+    const { players, unparsed } = parsePlayersResponse(text);
+    assert.deepStrictEqual(players, [{ id: '1', uid: '2b1321cc-1d4b-44d6-953d-2f70201d41d0', name: '☠ MCB Kiichi ☠' }]);
+    assert.deepStrictEqual(unparsed, []);
 });
 
 test('A2S: registra a resposta com a versão crua e marca a falha como já registrada', async () => {

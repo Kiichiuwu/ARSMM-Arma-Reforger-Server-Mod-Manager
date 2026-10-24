@@ -9,7 +9,7 @@ const PASSWORD = 'segredo123';
 // Servidor BattlEye RCon falso, suficiente para exercitar o cliente.
 function createFakeServer() {
     const socket = dgram.createSocket('udp4');
-    const state = { acks: [], commands: [], client: null, ignoreCommands: false };
+    const state = { acks: [], commands: [], client: null, ignoreCommands: false, reforgerPlayers: null, msgSeq: 100 };
     const send = (type, payload) => socket.send(buildPacket(type, payload), state.client.port, state.client.address);
 
     socket.on('message', (msg, rinfo) => {
@@ -23,6 +23,14 @@ function createFakeServer() {
             const command = packet.payload.subarray(1).toString();
             state.commands.push(command);
             if (state.ignoreCommands) return;
+            if (command === '#players' && state.reforgerPlayers) {
+                // Como o Reforger: a resposta vem sem a lista, que chega logo depois como mensagens do servidor.
+                send(0x01, Buffer.from([seq]));
+                setTimeout(() => {
+                    for (const text of state.reforgerPlayers) send(0x02, Buffer.concat([Buffer.from([state.msgSeq++ & 0xFF]), Buffer.from(text)]));
+                }, 40);
+                return;
+            }
             if (command === 'players') {
                 // Resposta em 3 partes, chegando fora de ordem.
                 const parts = ['Players on server:\n', '0 Fulano\n', '1 Ciclano'];
@@ -203,4 +211,38 @@ test('gerenciador: dados inválidos e senha errada viram erro com código', asyn
     await assert.rejects(manager.connect(1, { host: '', port: 1, password: 'x' }, () => {}), { code: 'INVALID' });
     await assert.rejects(manager.connect(1, { host: '127.0.0.1', port: 70000, password: 'x' }, () => {}), { code: 'INVALID' });
     await assert.rejects(manager.connect(1, { host: '127.0.0.1', port: fake.port, password: 'errada' }, () => {}), { code: 'RCON', message: /Senha/ });
+});
+
+test('gerenciador: jogadores do Reforger chegam como mensagem do servidor depois da resposta do #players', async () => {
+    const events = [];
+    const manager = createRconManager({ timeout: 1000, listWaitMs: 1000, listQuietMs: 100 });
+    const emit = (channel, payload) => events.push([channel, payload]);
+    await manager.connect(1, { host: '127.0.0.1', port: fake.port, password: PASSWORD }, emit);
+    fake.state.reforgerPlayers = [
+        '[LOG] Processing Command: #players',
+        '[LOG] Players on server: [Player#] ; [Player UID] ; [Player Name]\n1 ; 2b1321cc-1d4b-44d6-953d-2f70201d41d0 ; ☠ MCB Kiichi ☠',
+        '2 ; 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d ; Rato_Tatico',
+    ];
+    const result = await manager.players(1);
+    assert.deepStrictEqual(result.players, [
+        { id: '1', uid: '2b1321cc-1d4b-44d6-953d-2f70201d41d0', name: '☠ MCB Kiichi ☠' },
+        { id: '2', uid: '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d', name: 'Rato_Tatico' },
+    ]);
+    assert.deepStrictEqual(result.unparsed, [], 'cabeçalho e eco do comando não viram texto solto');
+    // A consulta automática não suja o terminal; uma mensagem qualquer do servidor continua chegando.
+    fake.pushMessage(200, '[LOG] Player Fulano connected');
+    await new Promise(r => setTimeout(r, 100));
+    assert.deepStrictEqual(events.filter(([c]) => c === 'rcon-log').map(([, m]) => m), ['[LOG] Player Fulano connected']);
+    manager.disconnect(1);
+});
+
+test('gerenciador: servidor vazio responde só o cabeçalho e a lista sai vazia sem esperar o tempo todo', async () => {
+    const manager = createRconManager({ timeout: 1000, listWaitMs: 1500, listQuietMs: 100 });
+    await manager.connect(1, { host: '127.0.0.1', port: fake.port, password: PASSWORD }, () => {});
+    fake.state.reforgerPlayers = ['[LOG] Players on server: [Player#] ; [Player UID] ; [Player Name]'];
+    const started = Date.now();
+    const result = await manager.players(1);
+    assert.deepStrictEqual(result.players, []);
+    assert.ok(Date.now() - started < 1000, 'termina pelo silêncio depois do cabeçalho, não pelo limite');
+    manager.disconnect(1);
 });

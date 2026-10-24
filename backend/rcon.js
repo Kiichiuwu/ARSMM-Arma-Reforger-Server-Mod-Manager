@@ -2,7 +2,15 @@
 const { BERcon } = require('./be-rcon');
 const { BackendError } = require('./util');
 
-function createRconManager({ log = () => {}, timeout = 5000 } = {}) {
+// O Reforger responde ao "#players" sem a lista e manda logo em seguida, como mensagem do servidor,
+// "[LOG] Players on server: ..." com uma linha por jogador. Espera essa mensagem por até LIST_WAIT_MS e,
+// depois dela, junta linhas de jogador que cheguem separadas até LIST_QUIET_MS sem mensagem nova.
+const LIST_HEADER_RE = /players on server/i;
+const LIST_WAIT_MS = 2000;
+const LIST_QUIET_MS = 300;
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+function createRconManager({ log = () => {}, timeout = 5000, listWaitMs = LIST_WAIT_MS, listQuietMs = LIST_QUIET_MS } = {}) {
     const sessions = new Map(); // ownerId -> BERcon
 
     function disconnect(ownerId) {
@@ -28,7 +36,8 @@ function createRconManager({ log = () => {}, timeout = 5000 } = {}) {
         // Só uma sessão já estabelecida avisa a janela; o resultado da tentativa volta pelo retorno de connect().
         let established = false;
         let reportedError = false;
-        rcon.on('message', (msg) => emit('rcon-log', msg));
+        // Mensagens da consulta automática de jogadores (Monitor, a cada 15 s) não poluem o terminal do RCON.
+        rcon.on('message', (msg) => { if (!(rcon.playersQueries > 0 && isPlayersListNoise(msg))) emit('rcon-log', msg); });
         rcon.on('error', (err) => {
             log('error', `[RCON] Erro: ${err.message}`);
             if (!established) return;
@@ -68,10 +77,34 @@ function createRconManager({ log = () => {}, timeout = 5000 } = {}) {
         }
     }
 
-    // Lista de jogadores com nome (o A2S do Reforger não informa nomes).
+    // Lista de jogadores com nome (o A2S do Reforger não informa nomes). Vale a lista que vier na resposta do
+    // comando ou, como no Reforger, a que chega logo depois como mensagem do servidor.
     async function players(ownerId) {
-        const raw = await send(ownerId, '#players');
-        return { ...parsePlayersResponse(raw), raw };
+        const rcon = sessions.get(ownerId);
+        if (!rcon) throw new BackendError('RCON', 'Não conectado.');
+        const messages = [];
+        let lastAt = 0;
+        const onMessage = (msg) => {
+            const text = String(msg);
+            // Antes do cabeçalho, ignora o resto (chat, "Processing Command"); depois, só linhas de jogador.
+            if (!messages.length ? !LIST_HEADER_RE.test(text) : !PLAYER_LINE_RE.test(stripLog(text.split(/\r?\n/)[0]))) return;
+            messages.push(text);
+            lastAt = Date.now();
+        };
+        rcon.on('message', onMessage);
+        rcon.playersQueries = (rcon.playersQueries || 0) + 1;
+        try {
+            const reply = await send(ownerId, '#players');
+            if (!LIST_HEADER_RE.test(reply) && !parsePlayersResponse(reply).players.length) {
+                const deadline = Date.now() + listWaitMs;
+                while (Date.now() < deadline && !(messages.length && Date.now() - lastAt >= listQuietMs)) await sleep(25);
+            }
+            const raw = [reply, ...messages].filter(Boolean).join('\n');
+            return { ...parsePlayersResponse(raw), raw };
+        } finally {
+            rcon.playersQueries--;
+            rcon.off('message', onMessage);
+        }
     }
 
     function disconnectAll() {
@@ -86,12 +119,25 @@ function createRconManager({ log = () => {}, timeout = 5000 } = {}) {
 const UID = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-fA-F]{32}';
 const PLAYER_LINE_RE = new RegExp(`^#?(\\d+)\\s*[;:|,.)-]?\\s*(?:(${UID})\\s*[;:|,-]?\\s*)?(.+)$`);
 
+// Linhas de log do Reforger vêm com "[LOG] " na frente.
+function stripLog(line) {
+    return String(line).trim().replace(/^\[LOG\]\s*/i, '');
+}
+
+// Cabeçalho da lista, eco do "#players" ou linha de jogador: o que a consulta automática gera.
+function isPlayersListNoise(msg) {
+    const first = stripLog(String(msg).split(/\r?\n/)[0]);
+    return /^(players on server|processing command:\s*#players)\b/i.test(first) || PLAYER_LINE_RE.test(first);
+}
+
 function parsePlayersResponse(text) {
     const players = [];
     const unparsed = [];
     for (const raw of String(text).split(/\r?\n/)) {
-        const line = raw.trim();
+        const line = stripLog(raw);
         if (!line) continue;
+        // Cabeçalho da lista e eco do comando não são jogadores nem precisam aparecer como texto solto.
+        if (/^(players on server|processing command)\b/i.test(line)) continue;
         const match = line.match(PLAYER_LINE_RE);
         // "25 players ..." é um resumo, não um jogador.
         if (match && !/^players?\b/i.test(match[3])) players.push({ id: match[1], uid: match[2] || '', name: match[3].trim() });

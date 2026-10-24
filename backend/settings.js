@@ -1,4 +1,4 @@
-// settings.js - Configurações do app (por enquanto só o token do BattleMetrics).
+// settings.js - Configurações do app: token do BattleMetrics e atualização automática do ARSMM.
 const { BackendError, isPlainObject, writeFileAtomic, readJson } = require('./util');
 
 function createSettingsStore(settingsFile) {
@@ -9,7 +9,12 @@ function createSettingsStore(settingsFile) {
 
     // O token nunca volta para a interface: ela só sabe se existe um.
     async function getPublic() {
-        return { hasBattlemetricsToken: !!(await read()).battlemetricsToken };
+        return publicView(await read());
+    }
+
+    // Atualização automática vem ligada: só fica desligada se o usuário desligar.
+    function publicView(settings) {
+        return { hasBattlemetricsToken: !!settings.battlemetricsToken, autoUpdate: settings.autoUpdate !== false };
     }
 
     async function update(changes) {
@@ -19,8 +24,9 @@ function createSettingsStore(settingsFile) {
             const token = changes.battlemetricsToken.trim();
             if (token) settings.battlemetricsToken = token; else delete settings.battlemetricsToken;
         }
+        if (typeof changes.autoUpdate === 'boolean') settings.autoUpdate = changes.autoUpdate;
         await writeFileAtomic(settingsFile, JSON.stringify(settings, null, 4));
-        return { hasBattlemetricsToken: !!settings.battlemetricsToken };
+        return publicView(settings);
     }
 
     return { read, getPublic, update };

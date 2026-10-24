@@ -104,13 +104,22 @@ test('salvamentos simultâneos do mesmo perfil nunca deixam o arquivo corrompido
 
 test('token do BattleMetrics é salvo, nunca devolvido à interface, e removido com texto vazio', async () => {
     const settings = createSettingsStore(path.join(tmp, 'settings.json'));
-    assert.deepStrictEqual(await settings.getPublic(), { hasBattlemetricsToken: false });
-    assert.deepStrictEqual(await settings.update({ battlemetricsToken: '  abc  ' }), { hasBattlemetricsToken: true });
+    assert.deepStrictEqual(await settings.getPublic(), { hasBattlemetricsToken: false, autoUpdate: true });
+    assert.deepStrictEqual(await settings.update({ battlemetricsToken: '  abc  ' }), { hasBattlemetricsToken: true, autoUpdate: true });
     assert.strictEqual((await settings.read()).battlemetricsToken, 'abc');
-    assert.deepStrictEqual(await settings.getPublic(), { hasBattlemetricsToken: true });
+    assert.deepStrictEqual(await settings.getPublic(), { hasBattlemetricsToken: true, autoUpdate: true });
     await settings.update({ battlemetricsToken: '' });
-    assert.deepStrictEqual(await settings.getPublic(), { hasBattlemetricsToken: false });
+    assert.deepStrictEqual(await settings.getPublic(), { hasBattlemetricsToken: false, autoUpdate: true });
     await assert.rejects(settings.update('x'), { code: 'INVALID' });
+});
+
+test('atualização automática vem ligada, desliga e liga, e ignora valor que não é booleano', async () => {
+    const settings = createSettingsStore(path.join(tmp, 'settings-update.json'));
+    assert.strictEqual((await settings.getPublic()).autoUpdate, true);
+    assert.strictEqual((await settings.update({ autoUpdate: false })).autoUpdate, false);
+    assert.strictEqual((await settings.update({ autoUpdate: 'sim' })).autoUpdate, false);
+    assert.strictEqual((await settings.update({ battlemetricsToken: 'x' })).autoUpdate, false, 'outra mudança não religa');
+    assert.strictEqual((await settings.update({ autoUpdate: true })).autoUpdate, true);
 });
 
 // --- WORKSHOP ---

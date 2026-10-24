@@ -28,6 +28,8 @@ Os perfis de servidor são salvos no diretório de dados do usuário do Windows 
 
 - Conexão via RCON (protocolo BattlEye RCon sobre UDP, o mesmo do servidor Arma Reforger)
 
+- RCON e A2S configurados sozinhos: ao criar um servidor, e ao abrir um perfil cujo config não tem os blocos `rcon` e `a2s` (ou tem valores que o servidor rejeitaria, como endereço com zero à esquerda, porta inválida ou senha do RCON vazia ou com espaço), o app completa com endereço `0.0.0.0`, portas livres (padrão 19999 para o RCON e 17777 para o A2S, sem repetir as do jogo) e a senha de admin no RCON, e salva o perfil. O que já está válido não muda. Quem remove o RCON pelo botão não o vê voltar. As portas UDP precisam estar liberadas no host (em hospedagens com painel, nas alocações de rede do servidor).
+
 <img src="docs/screenshots/rcon.png" width="900" alt="Terminal RCON conectado, com a resposta de #players" />
 
 - Monitor do servidor sem depender de terceiros: status, jogadores, cenário, versão e ping consultados direto no servidor pelo protocolo A2S (Steam Query, porta do bloco `a2s` do config, padrão 17777/UDP). Os nomes dos jogadores vêm do RCON (`#players`), porque o A2S do Reforger não os informa. Rank e país continuam disponíveis pelo BattleMetrics, que exige um token de API (assinatura).
@@ -55,6 +57,8 @@ Os perfis de servidor são salvos no diretório de dados do usuário do Windows 
 - Terminal ao vivo dividido (aba Outros): Principal (processo principal e interface), Backend (Workshop, RCON, A2S, BattleMetrics) e Erros (todo erro de qualquer origem), com contador de erros não lidos, filtro por módulo e botões copiar e limpar. Erros esperados (mod não encontrado, servidor sem resposta, token ausente) aparecem como aviso; exceções sem tratamento do processo principal e erros da interface também chegam ao terminal. A rolagem só acompanha as novas linhas quando você já está no fim. Mensagens repetidas (ex.: o Monitor consultando um servidor desligado a cada 15 s) aparecem uma vez a cada 5 minutos.
 
 <img src="docs/screenshots/terminal.png" width="900" alt="Terminal ao vivo na aba Backend" />
+
+- Atualização automática do ARSMM pela última versão do GitHub (chave "Atualização automática" na tela inicial e na aba Outros, ligada por padrão, com "Verificar agora"). Rodando pelo `start.bat` ou `npm start` numa cópia git, o app busca a branch `main` do GitHub ao abrir e a cada 6 horas e, se a cópia só estiver atrás, avança (`git merge --ff-only`); não mexe em nada se houver alteração local em arquivo versionado, se a cópia estiver em outra branch ou se tiver commits que não estão no GitHub. Um aviso oferece "Reiniciar agora": o perfil é salvo e o app abre de novo já na versão nova; se as dependências mudaram, uma janela roda `npm install` antes de abrir. No app instalado pelo instalador, a atualização vem das Releases do GitHub (electron-updater), baixada e instalada ao reiniciar. Com a chave desligada, o app só avisa que há versão nova.
 
 - Interface de criação/importação de servidor
 
@@ -117,6 +121,15 @@ O pacote será criado na pasta `dist/`.
 
 > Observação: o Windows Defender/SmartScreen pode bloquear o instalador em builds não assinados. Rode como administrador ou adicione exceção se necessário.
 
+### Publicar uma versão (atualização do app instalado)
+
+O app instalado se atualiza pelas Releases do GitHub. Para publicar uma versão:
+
+1. Suba a `version` no `package.json` (ex.: `1.1.0`) e faça o commit na `main`.
+2. Crie e envie a tag com o mesmo número: `git tag v1.1.0` e `git push origin v1.1.0`.
+
+O workflow `.github/workflows/release.yml` roda os testes, monta o instalador e cria a Release com o `latest.yml`, que o app instalado usa para se atualizar. Quem roda pelo `start.bat` recebe as mudanças direto da `main`, sem precisar de Release.
+
 ### Testes
 
 ```powershell
@@ -166,6 +179,8 @@ Server profiles are saved in the user's Windows data directory (see "Where files
 
 - RCON connection (BattlEye RCon protocol over UDP, the same one the Arma Reforger server uses)
 
+- RCON and A2S set up automatically: when a server is created, and when a profile whose config has no `rcon` and `a2s` blocks is opened (or has values the server would reject, such as an address with a leading zero, an invalid port, or an empty RCON password or one with spaces), the app fills them in with address `0.0.0.0`, free ports (19999 for RCON and 17777 for A2S by default, never the game's ports) and the admin password for RCON, and saves the profile. Anything already valid is left alone. Removing RCON with its button keeps it removed. The UDP ports must be open on the host (on hosts with a panel, in the server's network allocations).
+
 <img src="docs/screenshots/rcon-en.png" width="900" alt="RCON terminal connected, with the #players reply" />
 
 - Server monitor with no third party: status, players, scenario, version and ping queried straight from the server over A2S (Steam Query, the port of the config's `a2s` block, 17777/UDP by default). Player names come from RCON (`#players`), because Reforger's A2S does not report them. Rank and country are still available from BattleMetrics, which requires an API token (subscription).
@@ -193,6 +208,8 @@ Server profiles are saved in the user's Windows data directory (see "Where files
 - Split live terminal (Others tab): Main (main process and UI), Backend (Workshop, RCON, A2S, BattleMetrics) and Errors (every error from any source), with an unread error counter, a module filter and copy and clear buttons. Expected errors (mod not found, server not answering, missing token) show as warnings; unhandled main-process exceptions and UI errors reach the terminal too. Scrolling only follows new lines when you are already at the bottom. Repeated messages (e.g. the Monitor polling a server that is down every 15 s) show once every 5 minutes.
 
 <img src="docs/screenshots/terminal-en.png" width="900" alt="Live terminal on the Backend tab" />
+
+- Automatic ARSMM updates from the latest version on GitHub ("Automatic updates" switch on the start screen and in the Others tab, on by default, with "Check now"). Running from `start.bat` or `npm start` in a git copy, the app fetches GitHub's `main` branch on start and every 6 hours and, if the copy is only behind, moves forward (`git merge --ff-only`); it touches nothing when a tracked file has local changes, the copy is on another branch, or it has commits that are not on GitHub. A notice offers "Restart now": the profile is saved and the app reopens on the new version; if the dependencies changed, a window runs `npm install` before reopening. In the app installed with the installer, updates come from GitHub Releases (electron-updater), downloaded and installed on restart. With the switch off, the app only tells you a new version exists.
 
 - Create/import server configuration
 
@@ -255,6 +272,16 @@ npm run dist
 The package will be created under `dist/`.
 
 > Note: Windows Defender / SmartScreen may block unsigned installer builds. Run as administrator or add an exception if necessary.
+
+
+### Publish a version (updates for the installed app)
+
+The installed app updates from GitHub Releases. To publish a version:
+
+1. Bump `version` in `package.json` (e.g. `1.1.0`) and commit it to `main`.
+2. Create and push the matching tag: `git tag v1.1.0` and `git push origin v1.1.0`.
+
+The `.github/workflows/release.yml` workflow runs the tests, builds the installer and creates the Release with `latest.yml`, which the installed app uses to update itself. Whoever runs from `start.bat` gets changes straight from `main`, no Release needed.
 
 ### Tests
 

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, clipboard, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execFile, spawn } = require('child_process');
 const { fileURLToPath } = require('url');
 const { BackendError } = require('./backend/util');
 const { createProfileStore } = require('./backend/profiles');
@@ -9,6 +10,7 @@ const { createWorkshop } = require('./backend/workshop');
 const { createBattlemetrics } = require('./backend/battlemetrics');
 const { createRconManager } = require('./backend/rcon');
 const { createLogger } = require('./backend/logger');
+const { createUpdater, installAndRelaunchCommand } = require('./backend/updater');
 const a2s = require('./backend/a2s');
 
 // Duas instâncias abertas sobrescreveriam as edições uma da outra.
@@ -21,11 +23,15 @@ const CLOSE_TIMEOUT_MS = 5000;
 const MAX_RECENT_LOGS = 200; // por fluxo (main, backend, ui, errors)
 const REPEAT_LOG_MS = 5 * 60 * 1000; // a mesma mensagem repetida nesse intervalo não vai de novo ao terminal
 const PAGES = ['setup.html', 'index.html'].map(page => path.join(__dirname, page));
-const WINDOW_EVENTS = new Set(['server-log', 'rcon-status', 'rcon-log']);
+const WINDOW_EVENTS = new Set(['server-log', 'rcon-status', 'rcon-log', 'app-update']);
+const UPDATE_FIRST_CHECK_MS = 5000; // depois de abrir a janela, para não atrasar a inicialização
+const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const GIT_TIMEOUT_MS = 30000;
 
 let mainWindow = null;
 let isQuitting = false;
 let closeTimer = null;
+let restartPlan = null; // definido quando o usuário pede para reiniciar e aplicar a atualização
 
 // --- LOG (terminal da aba "Outros": fluxos Principal, Backend e Erros) ---
 const logger = createLogger({ limit: MAX_RECENT_LOGS, emit: (entry) => sendToWindow('server-log', entry) });
@@ -55,6 +61,39 @@ const settings = createSettingsStore(path.join(dataDir, 'settings.json'));
 const workshop = createWorkshop({ cacheFile: path.join(dataDir, 'mod-cache.json'), log: logger.scoped('workshop') });
 const battlemetrics = createBattlemetrics({ getToken: async () => (await settings.read()).battlemetricsToken, log: logger.scoped('battlemetrics') });
 const rcon = createRconManager({ log: logger.scoped('rcon') });
+
+// --- ATUALIZAÇÃO DO ARSMM (GitHub) ---
+const updateLog = logger.scoped('update', 'main', { dedupeMs: REPEAT_LOG_MS });
+function runGit(args) {
+    return new Promise((resolve, reject) => {
+        execFile('git', args, { cwd: __dirname, timeout: GIT_TIMEOUT_MS, windowsHide: true, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } },
+            (err, stdout, stderr) => (err ? reject(new Error(String(stderr || err.message).trim().split('\n').pop())) : resolve(String(stdout))));
+    });
+}
+function loadAutoUpdater() {
+    try {
+        return require('electron-updater').autoUpdater;
+    } catch (e) {
+        updateLog('warn', `electron-updater indisponível: ${e.message}`);
+        return null;
+    }
+}
+const updater = createUpdater({
+    appDir: __dirname,
+    isPackaged: app.isPackaged,
+    version: app.getVersion(),
+    runGit,
+    hasGitDir: fs.existsSync(path.join(__dirname, '.git')),
+    autoUpdater: app.isPackaged ? loadAutoUpdater() : null,
+    log: updateLog,
+});
+updater.onChange((status) => sendToWindow('app-update', status));
+
+// Verifica e, com a atualização automática ligada, já aplica (o reinício fica a critério do usuário).
+async function autoUpdateCheck() {
+    const status = await updater.check();
+    if (status.state === 'available' && (await settings.getPublic()).autoUpdate) await updater.apply();
+}
 
 // --- SEGURANÇA: só as páginas do próprio app falam com o backend ---
 function samePath(a, b) {
@@ -116,6 +155,17 @@ handle('rcon:players', (e) => rcon.players(e.sender.id));
 handle('monitor:query', (e, target) => a2s.queryInfo(target && target.host, target && target.port, { log: a2sLog }));
 handle('rcon:disconnect', (e) => rcon.disconnect(e.sender.id));
 handle('logs:recent', (e, stream) => logger.recent(stream === undefined ? 'main' : stream));
+handle('updater:status', () => updater.getStatus());
+handle('updater:check', async () => { await autoUpdateCheck(); return updater.getStatus(); });
+handle('updater:apply', () => updater.apply());
+// Reinicia pelo fluxo normal de fechar (a página salva o perfil antes) e aplica a atualização no fim.
+handle('updater:restart', () => {
+    const plan = updater.restartPlan();
+    if (!plan) throw new BackendError('INVALID', 'Não há atualização pronta para instalar.');
+    restartPlan = plan;
+    if (mainWindow) mainWindow.close(); else quitNow();
+    return { restarting: true };
+});
 
 handle('dialog:save-text', async (e, request) => {
     const filename = path.basename(String((request && request.filename) || 'config.json'));
@@ -193,6 +243,25 @@ function quitNow() {
     clearTimeout(closeTimer);
     closeTimer = null;
     isQuitting = true;
+    if (restartPlan) return restartWithUpdate(restartPlan);
+    app.quit();
+}
+
+function restartWithUpdate(plan) {
+    restartPlan = null;
+    if (plan.type === 'quit-and-install') {
+        const autoUpdater = loadAutoUpdater();
+        if (autoUpdater) return autoUpdater.quitAndInstall(false, true);
+    } else if (plan.type === 'install-and-relaunch' && process.platform === 'win32') {
+        // Dependências mudaram: um cmd separado espera o app fechar, roda npm install e abre o app de novo.
+        const command = installAndRelaunchCommand(process.execPath, process.argv.slice(1));
+        // windowsVerbatimArguments: o Node não escapa as aspas (o cmd não entende \"); /s tira as aspas de fora.
+        spawn('cmd.exe', ['/d', '/s', '/c', `"${command}"`], { cwd: plan.appDir, detached: true, stdio: 'ignore', windowsHide: false, windowsVerbatimArguments: true }).unref();
+        return app.quit();
+    } else if (plan.type === 'install-and-relaunch') {
+        updateLog('warn', 'Rode "npm install" antes de abrir o app: as dependências mudaram.');
+    }
+    app.relaunch();
     app.quit();
 }
 
@@ -232,6 +301,12 @@ app.whenReady().then(() => {
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => callback(false));
     log('log', `Pasta de saves: ${profiles.dir}`);
     createWindow();
+    updater.init().then((status) => {
+        updateLog('info', `ARSMM ${status.current.version}${status.current.commit ? ` (${status.current.commit.slice(0, 7)})` : ''}, atualização: ${status.mode}.`);
+        if (status.mode === 'none') return;
+        setTimeout(() => autoUpdateCheck().catch(() => {}), UPDATE_FIRST_CHECK_MS);
+        setInterval(() => autoUpdateCheck().catch(() => {}), UPDATE_INTERVAL_MS).unref();
+    }).catch((e) => updateLog('error', `Atualização: ${e.message}`));
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });

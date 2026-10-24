@@ -2,7 +2,7 @@
 // As chamadas devolvem { ok, data } ou { ok: false, code, error }; a página desembrulha com api().
 const { contextBridge, ipcRenderer } = require('electron');
 
-const EVENTS = new Set(['server-log', 'rcon-status', 'rcon-log']);
+const EVENTS = new Set(['server-log', 'rcon-status', 'rcon-log', 'app-update']);
 let closingHandler = null;
 
 // O main pede para fechar: a página salva (se registrou um handler) e confirma.
@@ -43,6 +43,12 @@ contextBridge.exposeInMainWorld('arsmm', {
         disconnect: invoke('rcon:disconnect'),
     },
     logs: { recent: invoke('logs:recent') },
+    updater: {
+        status: invoke('updater:status'),
+        check: invoke('updater:check'),
+        apply: invoke('updater:apply'),
+        restart: invoke('updater:restart'),
+    },
     saveTextFile: (filename, content) => ipcRenderer.invoke('dialog:save-text', { filename: String(filename), content: String(content) }),
     copyText: (text) => ipcRenderer.invoke('clipboard:write', String(text)),
     on: (channel, callback) => {

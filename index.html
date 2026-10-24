@@ -236,6 +236,10 @@
         .bm-table th, .bm-table td { text-align: left; padding: 12px 20px; border-bottom: 1px solid #2a2a2a; }
         .bm-table th { background: #151515; position: sticky; top: 0; color: #888; font-size: 0.8em; text-transform: uppercase; }
         .bm-table tr:hover { background: #252525; }
+        .update-banner { display: none; position: fixed; bottom: 16px; right: 16px; z-index: 3000; max-width: 560px; align-items: center; gap: 12px; background: #26290f; border: 1px solid var(--accent); border-radius: 4px; padding: 10px 14px; font-size: 0.85em; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+        .update-banner span { flex: 1; }
+        .update-banner .btn-install-all { flex-shrink: 0; padding: 8px 12px; }
+        .update-card { margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -425,11 +429,23 @@
                 <div class="col-half">
                     <h3 style="color:var(--accent);" data-i18n="others.configManagement">CONFIG MANAGEMENT</h3>
                     <div class="backup-card"><div class="backup-status"><span data-i18n="backup.status">Status do Backup:</span><span id="backupStatusText" style="color:#888;" data-i18n="backup.unknown">Desconhecido</span></div><div style="display:flex; gap:10px;"><button class="btn-large btn-primary" onclick="saveBackupClick()" data-i18n="button.saveBackup">SALVAR BACKUP (DISCO)</button><button class="btn-large btn-sec" onclick="reloadFromDisk()" data-i18n="button.loadBackup">CARREGAR DO DISCO</button></div></div>
+                    <div class="backup-card update-card">
+                        <div class="backup-status"><span data-i18n="update.title">ATUALIZAÇÃO DO ARSMM</span><span id="updateVersion" style="color:#888;"></span></div>
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <label class="switch"><input type="checkbox" id="chkAutoUpdate"><span class="slider"></span></label>
+                            <span id="autoUpdateLabel" style="font-weight:bold; color:#ccc;">Atualização automática</span>
+                            <span style="flex:1;"></span>
+                            <button class="btn-auto" style="margin:0;" id="btnCheckUpdate">Verificar agora</button>
+                        </div>
+                        <div id="updateStatus" style="font-size:0.85em; color:#888; margin-top:8px;"></div>
+                    </div>
                     <span class="sidebar-label" style="margin-top:20px;" data-i18n="backup.jsonPreview">JSON PREVIEW</span><textarea style="height:150px; font-family:monospace; color:#aaa; background:#111; border:1px solid #333;" readonly id="jsonCleanArea"></textarea>
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="update-banner" id="updateBanner" role="status"><span id="updateBannerText"></span><button class="btn-install-all" id="updateBannerBtn"></button></div>
 
     <div id="modalImport" class="modal"><div class="modal-box"><h3 style="color:var(--accent);" data-i18n="modal.importConfig">IMPORTAR CONFIG</h3><textarea id="importText" rows="10" style="background:#000; color:#fff; width:100%; font-family:monospace;"></textarea><br><br><button class="btn-large btn-primary" onclick="processImport()" data-i18n="button.processImport">PROCESSAR</button><button class="btn-large btn-sec" style="margin-top:5px;" onclick="document.getElementById('modalImport').style.display='none'" data-i18n="button.cancel">CANCELAR</button></div></div>
 
@@ -457,6 +473,7 @@
 <script src="shared/game-version.js"></script>
 <script src="shared/scenarios.js"></script>
 <script src="shared/server-config.js"></script>
+<script src="shared/update-ui.js"></script>
 <script>
         // --- INTEGRAÇÃO COM O ELECTRON ---
         // window.arsmm vem do preload.js; as chamadas devolvem { ok, data } ou { ok: false, code, error }.
@@ -671,6 +688,7 @@
                 'mon.auto': 'AUTO (15s)',
                 'mon.noA2sBlock': 'O config não tem o bloco "a2s". Sem ele a consulta direta pode não funcionar. Lembre de liberar a porta UDP no firewall.',
                 'mon.addA2s': 'ADICIONAR A2S AO CONFIG',
+                'update.title': 'ATUALIZAÇÃO DO ARSMM',
                 'auto.prefix': 'Config completado automaticamente e salvo: ',
                 'auto.rconAdded': 'RCON na porta {port}',
                 'auto.a2sAdded': 'A2S na porta {port}',
@@ -946,6 +964,7 @@
                 'mon.auto': 'AUTO (15s)',
                 'mon.noA2sBlock': 'The config has no "a2s" block. Without it the direct query may not work. Remember to open the UDP port in the firewall.',
                 'mon.addA2s': 'ADD A2S TO CONFIG',
+                'update.title': 'ARSMM UPDATES',
                 'auto.prefix': 'Config completed automatically and saved: ',
                 'auto.rconAdded': 'RCON on port {port}',
                 'auto.a2sAdded': 'A2S on port {port}',
@@ -1121,6 +1140,8 @@
         let mapSwap = true;            // meta.mapSwap: trocar os mods do mapa junto com a missão
 
         applyLocale();
+        // Atualização do ARSMM: aviso no topo e chave na aba Outros (shared/update-ui.js).
+        if (bridge) window.ARSMM_UPDATE_UI.mount({ bridge, api, getLang: getAppLanguage });
 
         // Ao fechar a janela: salva só se algo mudou. Se falhar, o main pergunta antes de descartar.
         bridge.onAppClosing(async () => {

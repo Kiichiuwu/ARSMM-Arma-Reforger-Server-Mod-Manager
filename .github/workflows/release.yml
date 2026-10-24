@@ -1,0 +1,25 @@
+# Publica uma versão do ARSMM: ao enviar uma tag v* (ex.: v1.1.0, igual à "version" do package.json),
+# monta o instalador do Windows e cria a Release no GitHub com o latest.yml que a atualização automática usa.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

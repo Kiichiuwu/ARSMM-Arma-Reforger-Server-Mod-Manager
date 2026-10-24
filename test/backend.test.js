@@ -173,9 +173,10 @@ test('getMod valida o ID antes de qualquer acesso à rede', async () => {
 
 test('getMod usa cache, agrupa pedidos simultâneos e aceita ID minúsculo', async () => {
     let calls = 0;
+    const urls = [];
     const workshop = createWorkshop({
         cacheFile: path.join(tmp, 'c1.json'),
-        fetchImpl: async (url) => { calls++; assert.match(url, /5965550F24A0C152$/); return fakeResponse(200, workshopHtml(ASSET)); },
+        fetchImpl: async (url) => { calls++; urls.push(url); return fakeResponse(200, workshopHtml(ASSET)); },
     });
     const [a, b] = await Promise.all([workshop.getMod('5965550f24a0c152'), workshop.getMod('5965550F24A0C152')]);
     assert.strictEqual(a.version, '1.2.0');
@@ -184,6 +185,8 @@ test('getMod usa cache, agrupa pedidos simultâneos e aceita ID minúsculo', asy
     assert.strictEqual(calls, 1);
     await workshop.getMod('5965550F24A0C152', { refresh: true });
     assert.strictEqual(calls, 2);
+    // Toda busca pula o CDN da Workshop com um parâmetro a mais na URL (o cache é o do ARSMM).
+    for (const url of urls) assert.match(url, /\/workshop\/5965550F24A0C152\?_=\d+$/);
     await workshop.flush();
     const file = JSON.parse(fs.readFileSync(path.join(tmp, 'c1.json'), 'utf8'));
     assert.strictEqual(file.schemaVersion, CACHE_SCHEMA_VERSION);
@@ -222,7 +225,7 @@ test('no máximo 4 downloads ao mesmo tempo', async () => {
             peak = Math.max(peak, active);
             await new Promise(r => setTimeout(r, 20));
             active--;
-            const id = url.slice(-16);
+            const id = url.match(/\/workshop\/([0-9A-F]{16})/)[1];
             return fakeResponse(200, workshopHtml({ ...ASSET, id }));
         },
     });
@@ -295,7 +298,8 @@ test('getGameVersion usa a página do mod e só busca o changelog para versões 
     const workshop = createWorkshop({
         cacheFile: path.join(tmp, 'c5.json'),
         fetchImpl: async (url) => {
-            urls.push(url.replace('https://reforger.armaplatform.com/workshop/5965550F24A0C152', ''));
+            // A página do mod leva ?_=<hora> para pular o CDN; aqui ela conta como ''.
+            urls.push(url.replace('https://reforger.armaplatform.com/workshop/5965550F24A0C152', '').replace(/^\?_=\d+$/, ''));
             if (url.endsWith('/changelog?page=1')) return fakeResponse(200, changelogHtml('5965550F24A0C152', 32, page1));
             if (url.endsWith('/changelog?page=2')) return fakeResponse(200, changelogHtml('5965550F24A0C152', 32, page2));
             if (url.includes('/changelog')) return fakeResponse(200, changelogHtml('5965550F24A0C152', 32, []));

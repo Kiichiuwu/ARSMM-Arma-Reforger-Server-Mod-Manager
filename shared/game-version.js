@@ -36,5 +36,21 @@
         return found ? { gameVersion: String(found.gameVersion || ''), listed: true } : { gameVersion: '', listed: false };
     }
 
-    return { parseMajorMinor, majorMinor, compareGameVersion, gameVersionForModVersion };
+    // Compara duas versões de mod, número por número ("1.0.10" > "1.0.9"). 1: a primeira é mais nova;
+    // -1: a segunda é mais nova; 0: iguais; null: alguma não é só números e pontos (não dá para ordenar).
+    function compareModVersion(a, b) {
+        const parse = (v) => {
+            const text = String(v ?? '').trim().replace(/^v/i, '');
+            return /^\d+(\.\d+)*$/.test(text) ? text.split('.').map(Number) : null;
+        };
+        const x = parse(a), y = parse(b);
+        if (!x || !y) return null;
+        for (let i = 0; i < Math.max(x.length, y.length); i++) {
+            const diff = (x[i] || 0) - (y[i] || 0);
+            if (diff) return diff > 0 ? 1 : -1;
+        }
+        return 0;
+    }
+
+    return { parseMajorMinor, majorMinor, compareGameVersion, gameVersionForModVersion, compareModVersion };
 });

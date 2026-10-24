@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { parseMajorMinor, majorMinor, compareGameVersion, gameVersionForModVersion } = require('../shared/game-version');
+const { parseMajorMinor, majorMinor, compareGameVersion, gameVersionForModVersion, compareModVersion } = require('../shared/game-version');
 
 test('parseMajorMinor lê só major.minor e tolera prefixo "v" e lixo no fim', () => {
     assert.deepStrictEqual(parseMajorMinor('1.8.0.13'), [1, 8]);
@@ -37,4 +37,18 @@ test('gameVersionForModVersion usa a mais recente no auto update e a fixada quan
     assert.deepStrictEqual(gameVersionForModVersion(data, '1.2.1'), { gameVersion: '', listed: false });
     assert.deepStrictEqual(gameVersionForModVersion({ version: '1.0.0' }, '1.0.0'), { gameVersion: '', listed: true });
     assert.deepStrictEqual(gameVersionForModVersion(null, ''), { gameVersion: '', listed: true });
+});
+
+test('compareModVersion ordena número por número e recusa o que não é numérico', () => {
+    assert.strictEqual(compareModVersion('1.0.4', '1.0.3'), 1);
+    assert.strictEqual(compareModVersion('1.0.3', '1.0.4'), -1); // cache velho: "mais recente" atrás da fixada
+    assert.strictEqual(compareModVersion('1.0.10', '1.0.9'), 1); // 10 > 9, não comparação de texto
+    assert.strictEqual(compareModVersion('0.16.5237', '0.16.5236'), 1);
+    assert.strictEqual(compareModVersion('1.1', '1.1.0'), 0);
+    assert.strictEqual(compareModVersion('v2.0.17', '2.0.17'), 0);
+    assert.strictEqual(compareModVersion('1.2.0', '1.10.0'), -1);
+    for (const bad of ['', null, undefined, '1.0.0-beta', 'abc', '1..2']) {
+        assert.strictEqual(compareModVersion(bad, '1.0.0'), null, `deveria recusar ${bad}`);
+        assert.strictEqual(compareModVersion('1.0.0', bad), null);
+    }
 });

@@ -148,8 +148,11 @@ function createWorkshop({ cacheFile, fetchImpl = globalThis.fetch, log = () => {
         });
     }
 
+    // A página passa pelo CDN da Workshop (Cloudflare), que segue servindo a cópia de antes da última
+    // publicação bem depois do s-maxage (visto: mais de 1h30). O ARSMM já tem cache próprio (CACHE_TTL_MS),
+    // então toda busca pula o CDN com um parâmetro a mais na URL.
     async function download(modId) {
-        return parseWorkshopPage(await fetchPage(`https://reforger.armaplatform.com/workshop/${modId}`), modId);
+        return parseWorkshopPage(await fetchPage(`https://reforger.armaplatform.com/workshop/${modId}?_=${Date.now()}`), modId);
     }
 
     async function getMod(id, { refresh = false } = {}) {

@@ -58,7 +58,7 @@ Os dados capturados incluem nomes, descrições, IDs e outras metadatas dos mods
 
 Infelizmente, a ausência de uma API dedicada torna o processo mais frágil, já que mudanças no layout do site podem quebrar a funcionalidade. Esperamos que a Bohemia Interactive considere implementar uma API oficial em futuras atualizações.
 
-Para reduzir essa fragilidade, o app lê os dados estruturados que a própria página publica (`<script id="__NEXT_DATA__">`) em vez de procurar texto no HTML, consulta no máximo 4 mods ao mesmo tempo e guarda os resultados em cache (`mod-cache.json`) por 6 horas. O cache tem um número de esquema: quando os campos guardados mudam, um cache antigo é descartado e baixado de novo.
+Para reduzir essa fragilidade, o app lê os dados estruturados que a própria página publica (`<script id="__NEXT_DATA__">`) em vez de procurar texto no HTML, consulta no máximo 4 mods ao mesmo tempo e guarda os resultados em cache (`mod-cache.json`) por 6 horas. O cache tem um número de esquema: quando os campos guardados mudam, um cache antigo é descartado e baixado de novo. A página passa pelo CDN da Workshop, que pode seguir entregando a cópia de antes de uma publicação por mais de uma hora; por isso cada consulta leva um parâmetro a mais na URL que pula esse CDN. Quando a versão fixada no config é mais nova do que a "mais recente" guardada (cache de antes da publicação), o app consulta de novo sem cache, e o mesmo vale para o mod que vai ser fixado ao entrar na lista ou ao desligar o auto update. O botão "Atualizar para" só aparece para uma versão mais nova; se a versão fixada não existe na Workshop, ele vira "Trocar para".
 
 ### Requisitos
 
@@ -185,7 +185,7 @@ The captured data includes mod names, descriptions, IDs, and other metadata from
 
 Unfortunately, the lack of a dedicated API makes the process more fragile, as changes to the website's layout can break functionality. We hope Bohemia Interactive will consider implementing an official API in future updates.
 
-To reduce that fragility, the app reads the structured data the page itself publishes (`<script id="__NEXT_DATA__">`) instead of searching the HTML text, queries at most 4 mods at a time and caches the results (`mod-cache.json`) for 6 hours. The cache carries a schema number: when the stored fields change, an old cache is discarded and fetched again.
+To reduce that fragility, the app reads the structured data the page itself publishes (`<script id="__NEXT_DATA__">`) instead of searching the HTML text, queries at most 4 mods at a time and caches the results (`mod-cache.json`) for 6 hours. The cache carries a schema number: when the stored fields change, an old cache is discarded and fetched again. The page goes through the Workshop CDN, which can keep serving the copy from before a release for more than an hour, so every request carries an extra URL parameter that skips that CDN. When the version pinned in the config is newer than the stored "latest" (a cache from before the release), the app fetches again without cache, and so does a mod that is about to be pinned (added to the list, or auto update turned off). The "Update to" button only shows for a newer version; when the pinned version does not exist on the Workshop it becomes "Switch to".
 
 ### Requirements
 

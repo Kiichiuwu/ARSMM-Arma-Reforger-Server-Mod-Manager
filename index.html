@@ -590,6 +590,8 @@
                 'mods.openWorkshop': 'Abrir no Workshop',
                 'mods.updateTo': 'Atualizar para',
                 'mods.updateTitle': 'Há uma versão mais nova na Workshop',
+                'mods.switchTo': 'Trocar para',
+                'mods.switchTitle': 'A versão fixada não aparece na Workshop. Clique para usar a mais recente.',
                 'mods.loadError': 'Falha ao buscar dados na Workshop. Clique para tentar de novo.',
                 'mods.retry': 'tentar de novo',
                 'mods.invalidId': 'ID inválido',
@@ -857,6 +859,8 @@
                 'mods.openWorkshop': 'Open in Workshop',
                 'mods.updateTo': 'Update to',
                 'mods.updateTitle': 'A newer version is available on the Workshop',
+                'mods.switchTo': 'Switch to',
+                'mods.switchTitle': 'The pinned version is not on the Workshop. Click to use the latest one.',
                 'mods.loadError': 'Failed to fetch Workshop data. Click to try again.',
                 'mods.retry': 'retry',
                 'mods.invalidId': 'Invalid ID',
@@ -1161,9 +1165,9 @@
             return out;
         }
 
-        async function fetchMod(id) {
+        async function fetchMod(id, options) {
             try {
-                return await api(bridge.workshop.getMod(id));
+                return await api(bridge.workshop.getMod(id, options));
             } catch (e) {
                 return e.code === 'NOT_FOUND' ? { notFound: true } : null;
             }
@@ -1191,13 +1195,42 @@
             if (mod.pinOnFetch && mod.latestVersion) mod.version = mod.latestVersion;
             mod.pinOnFetch = false;
             mod.status = 'ok';
-            // Mod de missão adicionado pelo seletor: traz as dependências junto (e as delas, em cadeia).
-            // Na hora, não num setTimeout: a busca nova entra em pendingModLoads antes desta terminar, então quem
-            // espera waitForModMetadata (salvar, fechar) vê a cadeia inteira. Mod removido no meio não traz nada.
-            if (mod.addDepsOnFetch) {
-                mod.addDepsOnFetch = false;
-                if (modList.includes(mod) && mod.dependencies.some(d => !findMod(d.id))) addAllDeps(mod, { recursive: true });
+            // Versão fixada mais nova que a "mais recente" dos dados: o cache do ARSMM é de antes da publicação.
+            // Busca de novo sem cache, uma vez por mod. As dependências esperam os dados novos (a versão nova pode
+            // ter ganho uma).
+            if (mod.version && !mod.freshChecked && !mod.staleRefetched && gameVersions.compareModVersion(mod.version, mod.latestVersion) === 1) {
+                mod.staleRefetched = true;
+                refetchFresh(mod);
+                return;
             }
+            addDepsFromFetch(mod);
+        }
+
+        // Mod de missão adicionado pelo seletor: traz as dependências junto (e as delas, em cadeia).
+        // Na hora, não num setTimeout: a busca nova entra em pendingModLoads antes desta terminar, então quem
+        // espera waitForModMetadata (salvar, fechar) vê a cadeia inteira. Mod removido no meio não traz nada.
+        function addDepsFromFetch(mod) {
+            if (!mod.addDepsOnFetch) return;
+            mod.addDepsOnFetch = false;
+            if (modList.includes(mod) && mod.dependencies.some(d => !findMod(d.id))) addAllDeps(mod, { recursive: true });
+        }
+
+        // Busca de novo pulando o cache do ARSMM. Entra em pendingModLoads, então salvar e fechar esperam por ela.
+        // Mod fora da lista neste instante (troca de mapa que depois é desfeita) recebe os dados do mesmo jeito.
+        function refetchFresh(mod) {
+            const generation = modLoadGeneration;
+            const run = api(bridge.workshop.getMod(mod.modId, { refresh: true })).then(data => {
+                if (generation !== modLoadGeneration) return;
+                // stale = a Workshop falhou e o backend devolveu o que já tinha: não conta como conferido.
+                if (data && !data.stale) mod.freshChecked = true;
+                applyModData(mod, data);
+            }, () => {
+                if (generation !== modLoadGeneration) return;
+                mod.pinOnFetch = false;
+                addDepsFromFetch(mod); // falhou: fica com o que já tinha
+            }).finally(scheduleRender);
+            pendingModLoads.add(run);
+            run.finally(() => pendingModLoads.delete(run));
         }
 
         // Busca os dados da Workshop dos mods pendentes, alguns por vez (o backend mantém cache).
@@ -1214,7 +1247,8 @@
             const worker = async () => {
                 while (queue.length) {
                     const mod = queue.shift();
-                    const data = await fetchMod(mod.modId);
+                    // Mod que vai ser fixado agora pega dado sem cache: senão fixa na versão de antes da publicação.
+                    const data = await fetchMod(mod.modId, mod.pinOnFetch ? { refresh: true } : undefined);
                     if (generation !== modLoadGeneration) return; // a lista foi trocada no meio do caminho
                     applyModData(mod, data);
                     scheduleRender();
@@ -1370,7 +1404,9 @@
             if (globalAutoUpdate) return;
             mod.autoUpdate = !mod.autoUpdate;
             if (!mod.autoUpdate && !mod.version) {
-                if (mod.latestVersion) mod.version = mod.latestVersion; else mod.pinOnFetch = true;
+                mod.pinOnFetch = true;
+                // Fixa já no que se sabe e confirma com dados sem cache (o cache pode ser de antes da publicação).
+                if (mod.latestVersion) { mod.version = mod.latestVersion; refetchFresh(mod); }
             }
             scheduleRender();
         }
@@ -1493,11 +1529,16 @@
                     : (mod.version ? `v${mod.version}` : 'v?'));
             if (mod.status === 'ok') versionRow.append(renderGameVersionBadge(mod, gameVersion, gvState));
             if (mod.obsolete) versionRow.append(h('span', { class: 'obsolete-badge', title: t('gv.obsoleteTitle') }, t('gv.obsolete')));
-            if (!isAuto && mod.version && mod.latestVersion && mod.version !== mod.latestVersion) {
+            // "Atualizar" só para versão mais nova. Fixada à frente dos dados pode ser cache velho: sem botão até uma
+            // busca sem cache confirmar. Confirmada (versão que não existe na Workshop) ou fora do padrão numérico,
+            // vira "Trocar para".
+            const latestCmp = mod.version && mod.latestVersion ? gameVersions.compareModVersion(mod.latestVersion, mod.version) : 0;
+            if (!isAuto && mod.version && mod.latestVersion && mod.version !== mod.latestVersion && !(latestCmp === -1 && !mod.freshChecked)) {
+                const newer = latestCmp === 1;
                 versionRow.append(h('button', {
-                    class: 'mod-update-btn', title: t('mods.updateTitle'),
+                    class: 'mod-update-btn', title: t(newer ? 'mods.updateTitle' : 'mods.switchTitle'),
                     onclick: () => { mod.version = mod.latestVersion; scheduleRender(); },
-                }, `${t('mods.updateTo')} v${mod.latestVersion}`));
+                }, `${t(newer ? 'mods.updateTo' : 'mods.switchTo')} v${mod.latestVersion}`));
             }
 
             let statusNode = null;

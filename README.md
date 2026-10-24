@@ -28,6 +28,8 @@ Os perfis de servidor são salvos no diretório de dados do usuário do Windows 
 
 - Conexão via RCON (protocolo BattlEye RCon sobre UDP, o mesmo do servidor Arma Reforger)
 
+- RCON e A2S configurados sozinhos: ao criar um servidor, e ao abrir um perfil cujo config não tem os blocos `rcon` e `a2s` (ou tem valores que o servidor rejeitaria, como endereço com zero à esquerda, porta inválida ou senha do RCON vazia ou com espaço), o app completa com endereço `0.0.0.0`, portas livres (padrão 19999 para o RCON e 17777 para o A2S, sem repetir as do jogo) e a senha de admin no RCON, e salva o perfil. O que já está válido não muda. Quem remove o RCON pelo botão não o vê voltar. As portas UDP precisam estar liberadas no host (em hospedagens com painel, nas alocações de rede do servidor).
+
 <img src="docs/screenshots/rcon.png" width="900" alt="Terminal RCON conectado, com a resposta de #players" />
 
 - Monitor do servidor sem depender de terceiros: status, jogadores, cenário, versão e ping consultados direto no servidor pelo protocolo A2S (Steam Query, porta do bloco `a2s` do config, padrão 17777/UDP). Os nomes dos jogadores vêm do RCON (`#players`), porque o A2S do Reforger não os informa. Rank e país continuam disponíveis pelo BattleMetrics, que exige um token de API (assinatura).
@@ -165,6 +167,8 @@ Server profiles are saved in the user's Windows data directory (see "Where files
 <img src="docs/screenshots/perfis-en.png" width="550" alt="Start screen with the profile list" />
 
 - RCON connection (BattlEye RCon protocol over UDP, the same one the Arma Reforger server uses)
+
+- RCON and A2S set up automatically: when a server is created, and when a profile whose config has no `rcon` and `a2s` blocks is opened (or has values the server would reject, such as an address with a leading zero, an invalid port, or an empty RCON password or one with spaces), the app fills them in with address `0.0.0.0`, free ports (19999 for RCON and 17777 for A2S by default, never the game's ports) and the admin password for RCON, and saves the profile. Anything already valid is left alone. Removing RCON with its button keeps it removed. The UDP ports must be open on the host (on hosts with a panel, in the server's network allocations).
 
 <img src="docs/screenshots/rcon-en.png" width="900" alt="RCON terminal connected, with the #players reply" />
 

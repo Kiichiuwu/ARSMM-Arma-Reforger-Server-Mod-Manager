@@ -83,6 +83,7 @@
     </div>
 </div>
 
+<script src="shared/server-config.js"></script>
 <script>
     let finalConfig = {}; // Objeto que será salvo
 
@@ -324,18 +325,13 @@
                     "networkViewDistance": 1000,
                     "serverMaxViewDistance": 2500
                 }
-            },
-            "rcon": {
-                "address": "127.0.0.1",
-                "port": 19999,
-                "password": adminPass,
-                "permission": "admin"
             }
         };
 
+        // RCON e A2S já configurados (endereço 0.0.0.0, portas livres; o RCON usa a senha de admin).
         finalConfig = {
             meta: { name: name, bmId: "" },
-            armaConfig: baseConfig
+            armaConfig: window.ARSMM_SERVER_CONFIG.ensureServerBlocks(baseConfig, { rconPassword: adminPass }).config
         };
         goToStep('bm');
     }

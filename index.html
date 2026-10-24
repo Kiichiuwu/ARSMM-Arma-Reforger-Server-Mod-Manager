@@ -456,6 +456,7 @@
 <script src="shared/load-order.js"></script>
 <script src="shared/game-version.js"></script>
 <script src="shared/scenarios.js"></script>
+<script src="shared/server-config.js"></script>
 <script>
         // --- INTEGRAÇÃO COM O ELECTRON ---
         // window.arsmm vem do preload.js; as chamadas devolvem { ok, data } ou { ok: false, code, error }.
@@ -670,6 +671,12 @@
                 'mon.auto': 'AUTO (15s)',
                 'mon.noA2sBlock': 'O config não tem o bloco "a2s". Sem ele a consulta direta pode não funcionar. Lembre de liberar a porta UDP no firewall.',
                 'mon.addA2s': 'ADICIONAR A2S AO CONFIG',
+                'auto.prefix': 'Config completado automaticamente e salvo: ',
+                'auto.rconAdded': 'RCON na porta {port}',
+                'auto.a2sAdded': 'A2S na porta {port}',
+                'auto.fixed': '{block}.{field} corrigido',
+                'auto.ports': '. Libere essas portas UDP no host (no painel da hospedagem, em Rede/Alocações).',
+                'auto.saveFailed': 'RCON/A2S completados, mas não deu para salvar agora (salva ao fechar): ',
                 'mon.directTitle': 'SERVIDOR (CONSULTA DIRETA)',
                 'mon.status': 'Status',
                 'mon.players': 'Jogadores',
@@ -939,6 +946,12 @@
                 'mon.auto': 'AUTO (15s)',
                 'mon.noA2sBlock': 'The config has no "a2s" block. Without it the direct query may not work. Remember to open the UDP port in the firewall.',
                 'mon.addA2s': 'ADD A2S TO CONFIG',
+                'auto.prefix': 'Config completed automatically and saved: ',
+                'auto.rconAdded': 'RCON on port {port}',
+                'auto.a2sAdded': 'A2S on port {port}',
+                'auto.fixed': '{block}.{field} fixed',
+                'auto.ports': '. Open these UDP ports on the host (in the hosting panel, under Network/Allocations).',
+                'auto.saveFailed': 'RCON/A2S completed, but saving failed for now (it saves on close): ',
                 'mon.directTitle': 'SERVER (DIRECT QUERY)',
                 'mon.status': 'Status',
                 'mon.players': 'Players',
@@ -1062,10 +1075,6 @@
         function clampInt(value, min, max, fallback) {
             const n = parseInt(value, 10);
             return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
-        }
-        function generatePassword() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-            return Array.from(crypto.getRandomValues(new Uint8Array(16)), b => chars[b % chars.length]).join('');
         }
         function formatBytes(bytes) {
             if (!bytes || bytes < 1) return '0 MB';
@@ -1415,6 +1424,7 @@
         // Compara só major.minor da versão do jogo da versão do mod que o servidor vai usar
         // (a fixada, ou a mais recente com auto update) com a versão do jogo do servidor.
         const gameVersions = window.ARSMM_GAME_VERSION;
+        const serverConfigRules = window.ARSMM_SERVER_CONFIG;
 
         // '' = sem dado; null = buscando no changelog (versão fixada fora das 10 últimas).
         function modGameVersion(mod) {
@@ -2507,7 +2517,9 @@
         }
 
         function installRcon() {
-            config.rcon = { address: '0.0.0.0', port: 19999, password: val('confAdminPass') || generatePassword(), permission: 'admin' };
+            delete profileMeta.rconDisabled;
+            // Mesma regra da configuração automática: porta livre e senha válida para o RCON.
+            config.rcon = serverConfigRules.ensureServerBlocks(buildConfig(), { a2s: false, rconPassword: val('confAdminPass') }).config.rcon;
             renderRconState();
             updateJson();
         }
@@ -2515,6 +2527,7 @@
         function removeRcon() {
             if (!confirm(t('rconRemoveConfirm'))) return;
             config.rcon = undefined;
+            profileMeta.rconDisabled = true; // não recriar automaticamente ao abrir o perfil
             renderRconState();
             updateJson();
         }
@@ -2950,13 +2963,40 @@
             }
             // IP de conexão do RCON: o salvo no perfil, senão o IP público, senão localhost.
             setVal('rconConnectIp', profileMeta.rconHost || json.armaConfig.publicAddress || '127.0.0.1');
-            populateForm(json.armaConfig);
-            setMonitorDefaults(json.armaConfig);
+            // RCON e A2S: completa o que falta ou o servidor rejeitaria, para o painel conectar e consultar sem
+            // configuração manual. RCON removido de propósito pelo usuário não volta.
+            const ensured = serverConfigRules.ensureServerBlocks(json.armaConfig, {
+                rcon: profileMeta.rconDisabled !== true,
+                rconPassword: isPlainObject(json.armaConfig.game) ? json.armaConfig.game.passwordAdmin : '',
+            });
+            populateForm(ensured.config);
+            setMonitorDefaults(ensured.config);
 
             profileLoaded = true;
             lastSavedSnapshot = currentSnapshot();
             setBackupStatus(t('profileLoadedStatus') + (profileMeta.name || currentFile), 'var(--accent)');
+            if (ensured.changes.length) await saveAutoServerBlocks(ensured.changes);
             if (profileMeta.bmId) loadBattlemetrics();
+        }
+
+        function describeServerBlockChanges(changes) {
+            return changes.map(c => c.field === 'block'
+                ? t(c.block === 'rcon' ? 'auto.rconAdded' : 'auto.a2sAdded').replace('{port}', c.to)
+                : t('auto.fixed').replace('{block}', c.block).replace('{field}', c.field)).join(', ');
+        }
+
+        // Grava na hora o que foi completado: o config exportado e o perfil já saem com RCON e A2S.
+        async function saveAutoServerBlocks(changes) {
+            const summary = describeServerBlockChanges(changes);
+            const ports = changes.some(c => c.field === 'block' || c.field === 'port') ? t('auto.ports') : '';
+            console.info(`[config] RCON/A2S: ${summary}`);
+            try {
+                await saveBackup();
+                setBackupStatus(t('auto.prefix') + summary + ports, 'var(--success)');
+            } catch (e) {
+                lastSavedSnapshot = null; // salva ao fechar
+                setBackupStatus(t('auto.saveFailed') + e.message, 'var(--danger)');
+            }
         }
 
         async function reloadFromDisk() {

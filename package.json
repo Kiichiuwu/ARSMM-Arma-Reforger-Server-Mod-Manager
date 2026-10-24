@@ -37,7 +37,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Arma-Reforger-Manager-Setup-${version}.${ext}"
     },
     "publish": [
       {

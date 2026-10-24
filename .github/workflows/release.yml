@@ -1,10 +1,19 @@
 # Publica uma versão do ARSMM: ao enviar uma tag v* (ex.: v1.1.0, igual à "version" do package.json),
 # monta o instalador do Windows e cria a Release no GitHub com o latest.yml que a atualização automática usa.
+# Também dá para rodar à mão (Actions > Release > Run workflow) para refazer os arquivos de uma tag que já existe.
+#
+# O upload é feito pelo gh, num passo só: com --publish always o electron-builder sobe os arquivos em paralelo e
+# tenta criar a Release duas vezes ao mesmo tempo; a segunda falha ("already_exists") e a Release fica incompleta.
 name: Release
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag da versão (ex.: v1.1.0)'
+        required: true
 
 permissions:
   contents: write
@@ -12,6 +21,9 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +32,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npx electron-builder --win --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Confere se a tag bate com a versão do package.json
+        shell: bash
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "$TAG" ]; then echo "A tag $TAG não bate com a versão $VERSION do package.json."; exit 1; fi
+      - run: npx electron-builder --win --publish never
+      - name: Publica a Release (instalador, blockmap e latest.yml)
+        shell: bash
+        run: |
+          FILES=(dist/Arma-Reforger-Manager-Setup-*.exe dist/Arma-Reforger-Manager-Setup-*.exe.blockmap dist/latest.yml)
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "${FILES[@]}" --clobber
+          else
+            gh release create "$TAG" "${FILES[@]}" --title "ARSMM ${TAG#v}" --notes "Instalador do Windows: baixe o arquivo .exe abaixo. Quem já tem o ARSMM instalado recebe esta versão pela atualização automática."
+          fi
